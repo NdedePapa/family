@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>My Family Tree</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+/* ─── Variables ─────────────────────────────────────────── */
+:root {
+  /* Dark mode (default) */
+  --ink:#f5ead5; --ink2:#b8a98a; --ink3:#7a6e5f;
+  --paper:#0f0a03; --panel:#19120a; --card:#231a0f;
+  --border:#2e2315; --gold:#c9963a; --gold2:#e8b96a;
+  --green:#3a9e6f; --red:#c0392b; --blue:#2e9fb5;
+  --purple:#7c5bb5; --radius:12px;
+}
+
+/* Light mode */
+[data-theme="light"] {
+  --ink:#2c2416; --ink2:#4a4032; --ink3:#6e6356;
+  --paper:#faf8f3; --panel:#f5f2ed; --card:#ffffff;
+  --border:#e4dfd6; --gold:#b8862e; --gold2:#9a6f23;
+  --green:#2d7f57; --red:#a53024; --blue:#217a8e;
+  --purple:#624a92; --radius:12px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);display:flex;flex-direction:column;touch-action:manipulation}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ─── Header ────────────────────────────────────────────── */
+.hdr{display:flex;align-items:center;gap:8px;padding:0 14px;height:54px;flex-shrink:0;background:var(--panel);border-bottom:1px solid var(--border);position:relative;z-index:30}
+.hdr::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.4}
+.logo{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;white-space:nowrap;color:var(--ink);flex-shrink:0}
+.logo em{color:var(--gold);font-style:normal}
+.hdr-search{position:relative;flex:1;min-width:0;max-width:220px}
+.hdr-search input{width:100%;background:var(--card);border:1px solid var(--border);color:var(--ink);padding:6px 10px 6px 28px;border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s}
+.hdr-search input:focus{border-color:var(--gold)}
+.hdr-search input::placeholder{color:var(--ink3)}
+.hdr-search .si{position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--ink3);font-size:13px;pointer-events:none}
+.conn-bar{display:flex;align-items:center;gap:5px;font-size:10px;font-family:'DM Mono',monospace;padding:3px 8px;border-radius:20px;border:1px solid transparent;transition:all .3s;white-space:nowrap;flex-shrink:0}
+.conn-bar.ok{color:var(--green);border-color:#3a9e6f40}
+.conn-bar.loading{color:var(--gold2);border-color:#c9963a40}
+.conn-bar.err{color:#e57373;border-color:#c0392b40}
+.conn-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+.hdr-right{display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0}
+.pills{display:flex;gap:4px}
+.pill{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:3px 8px;font-size:10px;color:var(--ink2);font-family:'DM Mono',monospace;white-space:nowrap}
+.pill b{color:var(--gold2)}
+
+/* ─── Buttons ───────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:7px 14px;border-radius:7px;border:none;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s;white-space:nowrap;min-height:34px;-webkit-tap-highlight-color:transparent}
+.btn:active{transform:scale(.97)}
+.btn-gold{background:var(--gold);color:#0f0a03}
+.btn-gold:hover{background:var(--gold2)}
+.btn-ghost{background:transparent;color:var(--ink2);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+.btn-green{background:#3a9e6f22;color:#5ddb9e;border:1px solid #3a9e6f44}.btn-green:hover{background:#3a9e6f40}
+.btn-red{background:#c0392b22;color:#e57373;border:1px solid #c0392b44}.btn-red:hover{background:#c0392b40}
+.btn-blue{background:#2e9fb522;color:#74d7f0;border:1px solid #2e9fb544}.btn-blue:hover{background:#2e9fb540}
+.btn-purple{background:#7c5bb522;color:#c4b5fd;border:1px solid #7c5bb544}.btn-purple:hover{background:#7c5bb540}
+.btn-sm{padding:5px 10px;font-size:11px;min-height:30px}
+.btn-icon{padding:7px 10px;font-size:15px;min-width:34px}
+.btn-help{background:var(--card);border:1px solid var(--border);border-radius:50%;width:32px;height:32px;font-size:14px;color:var(--gold);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;font-family:'DM Sans',sans-serif;font-weight:700}
+.btn-help:hover{background:var(--gold);color:#0f0a03;border-color:var(--gold)}
+
+/* ─── Layout ─────────────────────────────────────────────── */
+.main{flex:1;display:flex;overflow:hidden;position:relative}
+.canvas{flex:1;position:relative;overflow:hidden;background:var(--paper)}
+.canvas::before{content:'';position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(circle,#2e2315 1px,transparent 1px);background-size:28px 28px;opacity:.4}
+.canvas svg{width:100%;height:100%;display:block;touch-action:none}
+
+/* ─── Tree nodes ─────────────────────────────────────────── */
+.node-g{cursor:pointer}
+.n-bg{transition:filter .15s}
+.node-g:hover .n-bg{filter:brightness(1.25)}
+.node-g.selected .n-bg{filter:brightness(1.35)}
+.node-g.dim .n-bg{filter:brightness(0.25)}
+.node-g.dim text{opacity:.15}
+.node-g.bright .n-bg{filter:brightness(1.5) saturate(1.2)}
+.link{fill:none;stroke-width:1.5}
+
+/* ─── Canvas overlays ───────────────────────────────────── */
+.ctrl-cluster{position:absolute;bottom:18px;right:18px;display:flex;flex-direction:column;gap:5px;z-index:5}
+.ctrl-btn{width:40px;height:40px;background:var(--panel);border:1px solid var(--border);border-radius:9px;color:var(--ink2);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;-webkit-tap-highlight-color:transparent;font-family:'DM Sans',sans-serif}
+.ctrl-btn:hover{border-color:var(--gold);color:var(--gold)}
+.ctrl-btn:active{transform:scale(.93)}
+.legend{position:absolute;bottom:18px;left:18px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:10px;display:flex;flex-direction:column;gap:4px;z-index:5;max-width:calc(100vw - 80px)}
+.legend-hdr{font-family:'DM Mono',monospace;color:var(--ink3);font-size:8px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px}
+.leg-row{display:flex;align-items:center;gap:6px;color:var(--ink2)}
+.leg-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+
+/* ─── Floating hint bar ─────────────────────────────────── */
+.hint-bar{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:4px 14px;font-size:10px;color:var(--ink3);white-space:nowrap;pointer-events:none;opacity:.6;z-index:5}
+
+/* ─── Sidebar (desktop right panel / mobile bottom sheet) ─ */
+.sidebar{width:0;background:var(--panel);border-left:1px solid var(--border);overflow:hidden;transition:width .3s cubic-bezier(.4,0,.2,1);flex-shrink:0;display:flex;flex-direction:column}
+.sidebar.open{width:300px}
+.sb-scroll{width:300px;overflow-y:auto;flex:1;padding:18px}
+.sb-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.sb-close{background:none;border:none;color:var(--ink3);font-size:18px;cursor:pointer;padding:4px 8px;border-radius:6px;min-width:36px;min-height:36px;display:flex;align-items:center;justify-content:center}
+.sb-close:hover{background:var(--card);color:var(--ink)}
+.sb-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:20px;font-size:9px;font-family:'DM Mono',monospace;margin-bottom:7px}
+.sb-name{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;line-height:1.2;margin-bottom:3px}
+.sb-sub{font-size:11px;color:var(--ink3);margin-bottom:14px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:14px}
+.info-box{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 10px}
+.info-box .lbl{font-size:8px;color:var(--ink3);text-transform:uppercase;letter-spacing:.07em;font-family:'DM Mono',monospace;margin-bottom:3px}
+.info-box .val{font-size:11.5px;color:var(--ink);line-height:1.4;min-height:18px}
+.info-box .val.link{color:#74b9ff;cursor:pointer}
+.info-box .val.link:hover{text-decoration:underline}
+.notes-box{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:9px 11px;margin-bottom:14px}
+.notes-box .lbl{font-size:8px;color:var(--ink3);text-transform:uppercase;letter-spacing:.07em;font-family:'DM Mono',monospace;margin-bottom:5px}
+.notes-box .val{font-size:11.5px;color:var(--ink2);line-height:1.6;white-space:pre-wrap}
+.sb-actions{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.kids-section h4{font-size:8px;color:var(--ink3);text-transform:uppercase;letter-spacing:.07em;font-family:'DM Mono',monospace;margin-bottom:7px}
+.kid-chip{display:inline-flex;align-items:center;gap:4px;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:11px;margin:2px;cursor:pointer;transition:all .15s;color:var(--ink2);min-height:30px}
+.kid-chip:hover{color:var(--gold);border-color:var(--gold)}
+.sb-tip{background:#7c5bb518;border:1px solid #7c5bb540;border-radius:8px;padding:10px 12px;margin-top:12px;font-size:11px;color:#c4b5fd;line-height:1.6}
+.sb-tip strong{display:block;font-size:11.5px;margin-bottom:3px}
+
+/* ─── Overlays ──────────────────────────────────────────── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(5px);z-index:100;align-items:center;justify-content:center;padding:16px}
+.overlay.show{display:flex}
+
+/* ─── Base modal ────────────────────────────────────────── */
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);width:500px;max-width:100%;max-height:90vh;overflow-y:auto;padding:24px;position:relative;box-shadow:0 30px 80px rgba(0,0,0,.7)}
+.modal-stripe{position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--radius) var(--radius) 0 0}
+.modal h2{font-family:'Playfair Display',serif;font-size:19px;margin-bottom:4px;color:var(--ink);padding-top:4px}
+.modal-sub{font-size:11.5px;color:var(--ink3);margin-bottom:18px;line-height:1.6}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.form-grid .full{grid-column:1/-1}
+.fld{display:flex;flex-direction:column}
+.fld label{font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'DM Mono',monospace;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.fld label span{font-size:9px;color:#e57373;font-weight:600}
+.fld label em{font-style:normal;color:var(--ink3);font-size:8.5px;text-transform:none;letter-spacing:0;font-weight:400}
+.fld input,.fld select,.fld textarea{background:var(--card);border:1px solid var(--border);color:var(--ink);padding:9px 11px;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s,appearance .2s;-webkit-appearance:none;appearance:none}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--gold);box-shadow:0 0 0 2px #c9963a18}
+.fld input::placeholder{color:var(--ink3)}
+.fld select option{background:var(--card);color:var(--ink)}
+.fld textarea{resize:vertical;min-height:68px;line-height:1.5}
+.fld-hint{font-size:10px;color:var(--ink3);margin-top:4px;line-height:1.4}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+/* Context hint box inside modal */
+.ctx-box{border-radius:8px;padding:10px 13px;margin-bottom:14px;font-size:11px;line-height:1.6;display:none}
+.ctx-box.show{display:block}
+.ctx-box.ancestor{background:#7c5bb518;border:1px solid #7c5bb540;color:#c4b5fd}
+.ctx-box.info{background:#2e9fb518;border:1px solid #2e9fb540;color:#74d7f0}
+.ctx-box strong{display:block;font-size:12px;margin-bottom:3px}
+
+/* ─── Welcome / Help Modal ──────────────────────────────── */
+.welcome-modal{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);width:560px;max-width:100%;max-height:92vh;overflow-y:auto;position:relative;box-shadow:0 30px 80px rgba(0,0,0,.7)}
+.welcome-hero{background:linear-gradient(135deg,#1a0e04 0%,#2d1a0c 50%,#0c2010 100%);padding:28px 28px 22px;border-radius:var(--radius) var(--radius) 0 0;text-align:center;border-bottom:1px solid var(--border)}
+.welcome-hero .tree-icon{font-size:48px;margin-bottom:10px;display:block}
+.welcome-hero h1{font-family:'Playfair Display',serif;font-size:24px;color:var(--gold2);margin-bottom:5px}
+.welcome-hero p{font-size:12px;color:var(--ink3);line-height:1.6}
+.welcome-body{padding:22px 24px}
+.steps-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.step-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px}
+.step-card .step-icon{font-size:22px;margin-bottom:7px;display:block}
+.step-card h3{font-size:12px;font-weight:600;color:var(--ink);margin-bottom:4px}
+.step-card p{font-size:11px;color:var(--ink3);line-height:1.5}
+.step-card .step-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;background:var(--gold);color:#0f0a03;border-radius:50%;font-size:10px;font-weight:700;margin-bottom:8px}
+.faq-section{margin-top:6px}
+.faq-item{border-top:1px solid var(--border);padding:11px 0}
+.faq-item:first-child{border-top:none;padding-top:0}
+.faq-q{font-size:12px;font-weight:600;color:var(--ink);margin-bottom:4px;display:flex;align-items:flex-start;gap:7px}
+.faq-q::before{content:'Q';background:var(--gold);color:#0f0a03;width:18px;height:18px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;margin-top:1px}
+.faq-a{font-size:11.5px;color:var(--ink3);line-height:1.6;padding-left:25px}
+.welcome-foot{padding:0 24px 22px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border);padding-top:16px}
+
+/* ─── Export / Stats Modal ──────────────────────────────── */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:14px}
+.stat-box{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:11px 13px}
+.stat-box .num{font-family:'DM Mono',monospace;font-size:24px;color:var(--gold2)}
+.stat-box .lbl{font-size:10px;color:var(--ink3);margin-top:1px}
+
+/* ─── Confirm ───────────────────────────────────────────── */
+.confirm-box{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);width:360px;max-width:100%;padding:24px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.7)}
+.confirm-box .confirm-icon{font-size:36px;margin-bottom:10px;display:block}
+.confirm-box h3{font-family:'Playfair Display',serif;font-size:17px;margin-bottom:6px}
+.confirm-box p{font-size:11.5px;color:var(--ink3);margin-bottom:18px;line-height:1.5}
+.confirm-btns{display:flex;gap:8px;justify-content:center}
+
+/* ─── Toast ─────────────────────────────────────────────── */
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(10px);padding:10px 18px;border-radius:9px;font-size:12px;font-weight:600;opacity:0;transition:all .25s;z-index:300;pointer-events:none;white-space:nowrap;display:flex;align-items:center;gap:7px}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.success{background:var(--green);color:#fff}
+.toast.info{background:var(--gold);color:#0f0a03}
+.toast.err{background:var(--red);color:#fff}
+
+/* ─── Loading ───────────────────────────────────────────── */
+.loading-screen{position:fixed;inset:0;background:var(--paper);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200;gap:14px;transition:opacity .4s}
+.loading-screen.gone{opacity:0;pointer-events:none}
+.loading-logo{font-family:'Playfair Display',serif;font-size:26px;color:var(--gold)}
+.loading-msg{font-size:11.5px;color:var(--ink3);font-family:'DM Mono',monospace}
+.spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ─── Error state ───────────────────────────────────────── */
+.offline-banner{background:#c0392b18;border:1px solid #c0392b44;border-radius:8px;padding:12px 16px;margin:16px;font-size:12px;color:#e57373;line-height:1.6;text-align:center}
+.offline-banner strong{display:block;margin-bottom:3px;font-size:13px}
+
+/* ─── RESPONSIVE ────────────────────────────────────────── */
+@media(max-width:768px){
+  .pills{display:none}
+  .hdr-search{max-width:150px}
+  .conn-bar span{display:none}
+  .conn-bar{padding:4px 6px}
+  .welcome-modal{width:100%;border-radius:var(--radius) var(--radius) 0 0}
+}
+@media(max-width:600px){
+  .hdr{flex-wrap:wrap;height:auto;padding:8px 12px;gap:6px;row-gap:8px}
+  .logo{font-size:14px}
+  .hdr-search{order:3;max-width:100%;flex:1 1 100%}
+  .hdr-search input{font-size:14px;padding:8px 10px 8px 30px}
+  .hdr-right{gap:5px}
+  .btn{min-height:38px}
+  /* Sidebar → bottom sheet */
+  .sidebar{position:fixed!important;bottom:0;left:0;right:0;width:100%!important;max-height:0;border-left:none;border-top:1px solid var(--border);border-radius:16px 16px 0 0;transition:max-height .3s cubic-bezier(.4,0,.2,1);z-index:50;overflow:hidden}
+  .sidebar.open{max-height:75vh;width:100%!important}
+  .sb-scroll{width:100%!important;padding:6px 16px 28px;max-height:75vh}
+  .sidebar::before{content:'';display:block;width:36px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 4px;flex-shrink:0}
+  .info-grid{grid-template-columns:1fr 1fr}
+  /* Modals → slide up from bottom */
+  .overlay{align-items:flex-end;padding:0}
+  .modal,.confirm-box{width:100%;max-width:100%;border-radius:16px 16px 0 0;border-bottom:none;padding:20px 16px 32px;max-height:92vh}
+  .welcome-modal{width:100%;max-width:100%;border-radius:16px 16px 0 0;max-height:92vh}
+  .welcome-hero{border-radius:16px 16px 0 0}
+  .form-grid{grid-template-columns:1fr;gap:10px}
+  .form-grid .full{grid-column:1}
+  .fld input,.fld select,.fld textarea{font-size:16px;padding:10px 12px}
+  .steps-grid{grid-template-columns:1fr}
+  .kid-chip{min-height:34px;padding:6px 11px}
+  .sb-actions .btn{flex:1}
+  .ctrl-cluster{bottom:14px;right:14px;gap:6px}
+  .ctrl-btn{width:44px;height:44px;font-size:20px}
+  .legend{bottom:14px;left:14px;padding:8px 10px;gap:3px}
+  .legend-hdr{display:none}
+  .hint-bar{font-size:9px;padding:3px 10px}
+  .toast{font-size:13px;bottom:30px}
+  .stat-grid{grid-template-columns:1fr 1fr}
+}
+@media(min-width:1200px){.sidebar.open{width:320px}.sb-scroll{width:320px}}
+</style>
+</head>
+<body>
+
+<!-- ── Loading screen ───────────────────────────────────── -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-logo">🌳 My Family</div>
+  <div class="spinner"></div>
+  <div class="loading-msg" id="loadingMsg">Connecting to family database…</div>
+</div>
+
+<!-- ── Header ───────────────────────────────────────────── -->
+<div class="hdr">
+  <div class="logo">🌳 <em>My Family</em> Tree</div>
+
+  <div class="hdr-search">
+    <span class="si">⌕</span>
+    <input id="searchInput" type="text" placeholder="Search by name…" autocomplete="off" autocorrect="off">
+  </div>
+
+  <div class="conn-bar loading" id="connBar">
+    <div class="conn-dot"></div>
+    <span id="connText">Connecting…</span>
+  </div>
+
+  <div class="hdr-right">
+    <button class="btn-help" onclick="toggleAdminMode()" title="Admin mode (edit/delete)" id="adminBtn">🔒</button>
+    <button class="btn-help" onclick="toggleTheme()" title="Toggle light/dark mode" id="themeBtn">☀</button>
+    <button class="btn-help" onclick="openHelp()" title="How to use this app">?</button>
+    <button class="btn btn-green btn-sm" onclick="openExport()">📤 Backup</button>
+    <button class="btn btn-blue btn-sm" onclick="openChangeRequests()" id="requestsBtn" style="position:relative">📋 Requests <span id="requestsBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#c0392b;color:#fff;border-radius:10px;padding:2px 6px;font-size:9px;font-weight:700"></span></button>
+    <button class="btn btn-ghost btn-icon" onclick="resetView()" title="Fit whole tree on screen">⊙</button>
+    <button class="btn btn-gold" onclick="openAdd(null)">＋ Add Member</button>
+    <div class="pills" id="pills"></div>
+  </div>
+</div>
+
+<!-- ── Main canvas + sidebar ────────────────────────────── -->
+<div class="main">
+  <div class="canvas" id="canvas">
+    <svg id="svg" tabindex="0"></svg>
+    <div class="hint-bar" id="hintBar">Scroll to zoom · Drag to pan · Click any name to view details</div>
+    <div class="legend" id="legend"></div>
+    <div class="ctrl-cluster">
+      <button class="ctrl-btn" onclick="zoomBy(1.35)" title="Zoom in">＋</button>
+      <button class="ctrl-btn" onclick="zoomBy(0.74)" title="Zoom out">−</button>
+      <button class="ctrl-btn" onclick="resetView()" title="Fit to screen">⊙</button>
+    </div>
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <div class="sb-scroll" id="sbContent"></div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     WELCOME / HELP MODAL
+═════════════════════════════════════════════════════════ -->
+<div class="overlay" id="helpOverlay">
+  <div class="welcome-modal">
+    <div class="welcome-hero">
+      <span class="tree-icon">🌳</span>
+      <h1>Welcome to the My Family Tree</h1>
+      <p>A shared living record of our family — every member can add to it from any phone or computer.</p>
+    </div>
+    <div class="welcome-body">
+
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-num">1</div>
+          <span class="step-icon">👆</span>
+          <h3>Click any name</h3>
+          <p>Tap or click a name on the tree to see that person's details, their children, and quick action buttons.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">2</div>
+          <span class="step-icon">➕</span>
+          <h3>Add a family member</h3>
+          <p>Click <strong>＋ Add Member</strong> in the top bar, or click a person on the tree and press <strong>＋ Add Child</strong> to add their child directly.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">3</div>
+          <span class="step-icon">🔍</span>
+          <h3>Search & Navigate</h3>
+          <p>Use the search bar to find anyone instantly. Zoom with <strong>＋/−</strong> or scroll/pinch. Click <strong>⊙</strong> to fit the whole tree.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">4</div>
+          <span class="step-icon">�</span>
+          <h3>Admin Mode (optional)</h3>
+          <p>To edit or delete members, click the <strong>� lock button</strong> and enter the admin password. Otherwise, you can only add new members.</p>
+        </div>
+      </div>
+
+      <div class="faq-section">
+        <div class="faq-item">
+          <div class="faq-q">What is "Generation"?</div>
+          <div class="faq-a">It tells the tree how many steps below Nana Aku a person is. <strong>Gen I = Nana Aku</strong>, <strong>Gen II = her children</strong>, <strong>Gen III = her grandchildren</strong>, and so on. When you add a child, the generation is filled in automatically — you don't need to change it.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">What is "Parent"?</div>
+          <div class="faq-a">This links the person to their mother or father in the tree. Always select a parent so the person appears in the right place. If you're unsure, leave it blank and edit it later.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">Can I add Nana Aku's own mother or grandmother?</div>
+          <div class="faq-a">Yes! Click <strong>Nana Aku</strong> on the tree, then press <strong>▲ Add Ancestor</strong>. The form will guide you. Her ancestors appear above her at the top of the tree in purple.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">How do I find someone quickly?</div>
+          <div class="faq-a">Type their name in the <strong>search bar</strong> at the top. Matching people will glow — everyone else will fade out.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">The tree is too small / hard to read</div>
+          <div class="faq-a">Use the <strong>＋ / −</strong> zoom buttons on the right, or scroll/pinch on your device. Press <strong>⊙</strong> to fit the whole tree on screen again. You can also drag to move around.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">What does "Added By" mean?</div>
+          <div class="faq-a">It's where you put <em>your own name</em> — so the family knows who contributed each record. This helps when information needs to be checked or corrected.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">🔒 What is Admin Mode?</div>
+          <div class="faq-a">By default, everyone can <strong>view and add members</strong>. To protect the tree, <strong>Edit</strong> and <strong>Delete</strong> require admin access. Click the <strong>🔒 lock button</strong> in the top bar and enter the password to unlock admin mode.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">What if I spot a mistake but can't edit?</div>
+          <div class="faq-a">Click the person's card and press <strong>📝 Request Change</strong>. Describe the correction needed — the admin will receive your request and can make the fix.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">☀/🌙 Can I change the appearance?</div>
+          <div class="faq-a">Yes! Click the <strong>☀ sun/moon button</strong> in the top bar to toggle between light and dark mode. Your preference is saved automatically.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="welcome-foot">
+      <button class="btn btn-ghost" onclick="closeHelp()">Close</button>
+      <button class="btn btn-gold" onclick="closeHelp()">Got it — let's go! 🌳</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     ADD / EDIT MEMBER MODAL
+═════════════════════════════════════════════════════════ -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-stripe" id="modalStripe" style="background:linear-gradient(90deg,transparent,var(--gold),transparent)"></div>
+    <h2 id="modalTitle">Add Family Member</h2>
+    <p class="modal-sub" id="modalSub">Fill in what you know — you can always edit later. Fields marked <span style="color:#e57373">*</span> are required.</p>
+
+    <!-- Context tip — shown for ancestors -->
+    <div class="ctx-box ancestor" id="ctxAncestor">
+      <strong>🔼 Adding an ancestor — someone above Nana Aku</strong>
+      Leave <em>Parent</em> blank unless you know this person's own parent. After saving, click Nana Aku on the tree and press ✎ Edit to connect her to this ancestor.
+    </div>
+
+    <div class="form-grid">
+
+      <div class="fld full">
+        <label>Full Name <span>*</span></label>
+        <input id="f-name" type="text" placeholder="e.g. Kofi Mensah  or  Abena Nyarko" autocomplete="off">
+        <div class="fld-hint">Write the name as the family knows it. You can include nicknames in brackets, e.g. "Victoria Tandoh (Sister Mother)"</div>
+      </div>
+
+      <div class="fld">
+        <label>Gender</label>
+        <select id="f-gender">
+          <option value="">Not specified</option>
+          <option value="Female">♀ Female</option>
+          <option value="Male">♂ Male</option>
+          <option value="Non-binary">⊕ Other / Non-binary</option>
+        </select>
+      </div>
+
+      <div class="fld">
+        <label>Generation <em>— where in the tree?</em></label>
+        <select id="f-gen" onchange="onGenChange()">
+          <optgroup label="▲ Ancestors — above Nana Aku">
+            <option value="-3">−3 · Great-great-grandparents</option>
+            <option value="-2">−2 · Great-grandparents</option>
+            <option value="-1">−1 · Grandparents of Nana Aku</option>
+            <option value="0"> 0 · Parents of Nana Aku</option>
+          </optgroup>
+          <optgroup label="▼ Nana Aku and her descendants">
+            <option value="1">Gen I — Nana Aku (Matriarch)</option>
+            <option value="2" selected>Gen II — Children</option>
+            <option value="3">Gen III — Grandchildren</option>
+            <option value="4">Gen IV — Great-Grandchildren</option>
+            <option value="5">Gen V — 5th Generation</option>
+            <option value="6">Gen VI — 6th Generation</option>
+            <option value="7">Gen VII — 7th Generation</option>
+            <option value="8">Gen VIII — 8th Generation</option>
+            <option value="9">Gen IX — 9th Generation</option>
+            <option value="10">Gen X — 10th Generation</option>
+          </optgroup>
+        </select>
+        <div class="fld-hint" id="genHint">When adding a child, the generation is set automatically — you usually don't need to change this.</div>
+      </div>
+
+      <div class="fld full">
+        <label>Parent <em>— who is this person's mother or father in the tree?</em></label>
+        <select id="f-parent"><option value="">— Unknown / no parent yet —</option></select>
+        <div class="fld-hint">⚠ Always select a parent so the person appears in the right place. If you added them using "＋ Add Child", this is already filled in.</div>
+      </div>
+
+      <div class="fld">
+        <label>Birth Year <em>— optional</em></label>
+        <input id="f-birth" type="number" placeholder="e.g. 1945" min="1800" max="2100" inputmode="numeric">
+      </div>
+
+      <div class="fld">
+        <label>Death Year <em>— leave blank if alive</em></label>
+        <input id="f-death" type="number" placeholder="e.g. 2010" min="1800" max="2100" inputmode="numeric">
+      </div>
+
+      <div class="fld">
+        <label>Hometown <em>— optional</em></label>
+        <input id="f-town" type="text" placeholder="e.g. Accra, Cape Coast, Kumasi…">
+      </div>
+
+      <div class="fld">
+        <label>Added By <span>*</span> <em>— your own name</em></label>
+        <input id="f-by" type="text" placeholder="Your name, so we know who added this">
+        <div class="fld-hint">This helps the family know who to ask if details need checking.</div>
+      </div>
+
+      <div class="fld full">
+        <label>Notes <em>— optional</em></label>
+        <textarea id="f-notes" placeholder="Occupation, story, nickname, anything useful about this person…"></textarea>
+      </div>
+
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-gold" id="saveBtn" onclick="saveMember()">💾 Save Member</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     EXPORT / BACKUP MODAL
+═════════════════════════════════════════════════════════ -->
+<div class="overlay" id="exOverlay">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-stripe" style="background:linear-gradient(90deg,transparent,var(--green),transparent)"></div>
+    <h2>📤 Backup Your Family Data</h2>
+    <p class="modal-sub">Your data is saved automatically on every change. Download a backup file as extra insurance.</p>
+    <div class="stat-grid" id="exStats"></div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:11px;color:var(--ink3);line-height:1.6;margin-bottom:4px">
+      💡 <strong style="color:var(--ink2)">Tip:</strong> Download a backup after any session where you've added new members. Store it on your phone's gallery, WhatsApp, or email it to yourself. You can restore from this file at any time using the <strong>Import</strong> feature.
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeEx()">Close</button>
+      <button class="btn btn-green" onclick="doExport()">⬇ Download Backup File</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     CHANGE REQUESTS MODAL (Admin View)
+═════════════════════════════════════════════════════════ -->
+<div class="overlay" id="requestsOverlay">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-stripe" style="background:linear-gradient(90deg,transparent,#2e9fb5,transparent)"></div>
+    <h2>📋 Change Requests from Family</h2>
+    <p class="modal-sub">Review correction requests submitted by family members who can't edit directly.</p>
+    <div id="requestsList" style="max-height:400px;overflow-y:auto"></div>
+    <div class="modal-foot">
+      <button class="btn btn-gold" onclick="closeRequests()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     CONFIRM DIALOG
+═════════════════════════════════════════════════════════ -->
+<div class="overlay" id="cfOverlay">
+  <div class="confirm-box">
+    <span class="confirm-icon" id="cfIcon">⚠️</span>
+    <h3 id="cfTitle">Are you sure?</h3>
+    <p id="cfMsg">This cannot be undone.</p>
+    <div class="confirm-btns">
+      <button class="btn btn-ghost" onclick="cfResolve(false)">No, cancel</button>
+      <button class="btn btn-red" id="cfOk" onclick="cfResolve(true)">Yes, confirm</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   GENERATION METADATA  (ancestors: -3 to 0, descendants: 1-10)
+═══════════════════════════════════════════════════════════ */
+const GM = {
+  '-3':{label:'−3 · Gt-gt-grandparents',short:'−3',color:'#f59e0b',bg:'#2d1f00'},
+  '-2':{label:'−2 · Great-grandparents', short:'−2',color:'#a78bfa',bg:'#1e1040'},
+  '-1':{label:'−1 · Grandparents',       short:'−1',color:'#34d399',bg:'#003322'},
+  '0': {label:' 0 · Parents of Nana Aku',short:' 0',color:'#e879f9',bg:'#2a0030'},
+   1:  {label:'I — Matriarch',            short:'I',  color:'#c0392b',bg:'#2d0f0c'},
+   2:  {label:'II — Children',            short:'II', color:'#c87941',bg:'#2d1a0c'},
+   3:  {label:'III — Grandchildren',      short:'III',color:'#3a9e6f',bg:'#0c2d1e'},
+   4:  {label:'IV — Great-Grandchildren', short:'IV', color:'#7c5bb5',bg:'#1e1030'},
+   5:  {label:'V — 5th Generation',       short:'V',  color:'#c0875a',bg:'#2d1808'},
+   6:  {label:'VI — 6th Generation',      short:'VI', color:'#2e9fb5',bg:'#082028'},
+   7:  {label:'VII — 7th Generation',     short:'VII',color:'#b55a7c',bg:'#2d0818'},
+   8:  {label:'VIII — 8th Generation',    short:'VIII',color:'#7aab47',bg:'#182808'},
+   9:  {label:'IX — 9th Generation',      short:'IX', color:'#5a7cb5',bg:'#080e28'},
+  10:  {label:'X — 10th Generation',      short:'X',  color:'#b5a83a',bg:'#28240a'},
+};
+function gm(g){ return GM[g]||GM[String(g)]||GM[4]; }
+
+/* ═══════════════════════════════════════════════════════════
+   SEED DATA (92 members — fallback if server unreachable)
+═══════════════════════════════════════════════════════════ */
+const SEED=[{id:1,name:'Nana Aku',gender:'Female',gen:1,parentId:null,birth:'',death:'',town:'',notes:'Family matriarch — the root of our tree',by:''},{id:2,name:'Yaba',gender:'',gen:2,parentId:1,birth:'',death:'',town:'',notes:'',by:''},{id:3,name:'Unknown (2)',gender:'',gen:2,parentId:1,birth:'',death:'',town:'',notes:'2nd child of Nana Aku',by:''},{id:4,name:'Aduah',gender:'',gen:2,parentId:1,birth:'',death:'',town:'',notes:'3rd child of Nana Aku',by:''},{id:68,name:'3h3l3 Le gy3ni',gender:'',gen:2,parentId:1,birth:'',death:'',town:'',notes:'',by:''},{id:77,name:'Tobia',gender:'',gen:2,parentId:1,birth:'',death:'',town:'',notes:'',by:''},{id:5,name:'Ama Nyora',gender:'Female',gen:3,parentId:2,birth:'',death:'',town:'',notes:'',by:''},{id:6,name:'Raal3 Aya',gender:'',gen:3,parentId:2,birth:'',death:'',town:'',notes:'',by:''},{id:7,name:'Georgina (3b3la)',gender:'Female',gen:3,parentId:2,birth:'',death:'',town:'',notes:'',by:''},{id:8,name:'Raal3 Ahua Wongara',gender:'',gen:3,parentId:2,birth:'',death:'',town:'',notes:'',by:''},{id:9,name:'Auntie Adjei',gender:'',gen:3,parentId:2,birth:'',death:'',town:'',notes:'',by:''},{id:76,name:'Nana Cudjoe',gender:'',gen:3,parentId:2,birth:'',death:'',town:'',notes:'',by:''},{id:79,name:'Sofo Andoh',gender:'',gen:3,parentId:4,birth:'',death:'',town:'',notes:'',by:''},{id:80,name:'Sofo Kojo',gender:'',gen:3,parentId:4,birth:'',death:'',town:'',notes:'',by:''},{id:10,name:'Paul Kaku Mensah (Uncle Mienza)',gender:'Male',gen:4,parentId:5,birth:'',death:'',town:'',notes:'',by:''},{id:11,name:'Mary Efaw Nikte',gender:'Female',gen:4,parentId:5,birth:'',death:'',town:'',notes:'',by:''},{id:12,name:'Akua Mienza',gender:'Female',gen:4,parentId:5,birth:'',death:'',town:'',notes:'',by:''},{id:13,name:'Joseph Alu Nyanzu',gender:'',gen:4,parentId:5,birth:'',death:'',town:'',notes:'',by:''},{id:14,name:'Benjamin Kweku Kwamena',gender:'',gen:4,parentId:5,birth:'',death:'',town:'',notes:'',by:''},{id:57,name:'Nyamek3',gender:'',gen:4,parentId:5,birth:'',death:'',town:'',notes:'',by:''},{id:69,name:'Oluman',gender:'',gen:4,parentId:5,birth:'',death:'',town:'',notes:'',by:''},{id:70,name:'Wofa Armah',gender:'',gen:4,parentId:5,birth:'',death:'',town:'',notes:'',by:''},{id:15,name:'Nreza Assuah',gender:'',gen:4,parentId:6,birth:'',death:'',town:'',notes:'',by:''},{id:16,name:'Assuah',gender:'',gen:4,parentId:6,birth:'',death:'',town:'',notes:'',by:''},{id:17,name:'Victoria Tandoh (Sister Mother)',gender:'Female',gen:4,parentId:7,birth:'',death:'',town:'',notes:'',by:''},{id:18,name:'Ajevi',gender:'',gen:4,parentId:7,birth:'',death:'',town:'',notes:'',by:''},{id:19,name:'Afriyie',gender:'',gen:4,parentId:8,birth:'',death:'',town:'',notes:'',by:''},{id:20,name:'Amina',gender:'Female',gen:4,parentId:8,birth:'',death:'',town:'',notes:'',by:''},{id:21,name:'Yaa Abuabo',gender:'Female',gen:4,parentId:8,birth:'',death:'',town:'',notes:'',by:''},{id:22,name:'Akos 1',gender:'Female',gen:4,parentId:8,birth:'',death:'',town:'',notes:'',by:''},{id:23,name:'Akos 2',gender:'Female',gen:4,parentId:8,birth:'',death:'',town:'',notes:'',by:''},{id:24,name:'Adjoa Broni',gender:'Female',gen:4,parentId:8,birth:'',death:'',town:'',notes:'',by:''},{id:25,name:'Wofa Yaw',gender:'Male',gen:4,parentId:8,birth:'',death:'',town:'',notes:'',by:''},{id:26,name:'Sister Yaba',gender:'Female',gen:4,parentId:9,birth:'',death:'',town:'',notes:'',by:''},{id:27,name:'Kojo',gender:'Male',gen:4,parentId:9,birth:'',death:'',town:'',notes:'',by:''},{id:28,name:'Akuba',gender:'Female',gen:4,parentId:9,birth:'',death:'',town:'',notes:'',by:''},{id:29,name:'Ama Mansa',gender:'Female',gen:4,parentId:9,birth:'',death:'',town:'',notes:'',by:''},{id:81,name:'Hannah Cudjoe',gender:'',gen:4,parentId:76,birth:'',death:'',town:'',notes:'',by:''},{id:82,name:'Anna Cudjoe (Yaba)',gender:'',gen:4,parentId:76,birth:'',death:'',town:'',notes:'',by:''},{id:83,name:'Janet Cudjoe',gender:'',gen:4,parentId:76,birth:'',death:'',town:'',notes:'',by:''},{id:84,name:'Samuel Cudjoe',gender:'',gen:4,parentId:76,birth:'',death:'',town:'',notes:'',by:''},{id:85,name:'Aduah',gender:'',gen:4,parentId:76,birth:'',death:'',town:'',notes:'',by:''},{id:30,name:'Gabriel Ekra Armah',gender:'',gen:5,parentId:15,birth:'',death:'',town:'',notes:'',by:''},{id:31,name:'Mosses Armah',gender:'',gen:5,parentId:15,birth:'',death:'',town:'',notes:'',by:''},{id:32,name:'Chantel Bennie Armah',gender:'',gen:5,parentId:15,birth:'',death:'',town:'',notes:'',by:''},{id:33,name:'Francis Ackah Armah',gender:'',gen:5,parentId:15,birth:'',death:'',town:'',notes:'',by:''},{id:34,name:'Kone',gender:'',gen:5,parentId:15,birth:'',death:'',town:'',notes:'',by:''},{id:35,name:'Bomo',gender:'',gen:5,parentId:15,birth:'',death:'',town:'',notes:'',by:''},{id:36,name:'Victoria Coffie',gender:'',gen:5,parentId:15,birth:'',death:'',town:'',notes:'',by:''},{id:37,name:'Stephanie Coffie',gender:'',gen:5,parentId:15,birth:'',death:'',town:'',notes:'',by:''},{id:38,name:'Albertine Coffie',gender:'',gen:5,parentId:15,birth:'',death:'',town:'',notes:'',by:''},{id:60,name:'Elizabeth Assuah (Nda)',gender:'',gen:5,parentId:16,birth:'',death:'',town:'',notes:'',by:''},{id:61,name:'Patience Assuah (Ndale)',gender:'',gen:5,parentId:16,birth:'',death:'',town:'',notes:'',by:''},{id:62,name:'Frederick Assuah (Enzi Mitian)',gender:'',gen:5,parentId:16,birth:'',death:'',town:'',notes:'',by:''},{id:63,name:'William Assuah (Nana)',gender:'',gen:5,parentId:16,birth:'',death:'',town:'',notes:'',by:''},{id:64,name:'Jacob Assuah',gender:'',gen:5,parentId:16,birth:'',death:'',town:'',notes:'',by:''},{id:65,name:'Eva Assuah (Maame Aya)',gender:'',gen:5,parentId:16,birth:'',death:'',town:'',notes:'',by:''},{id:66,name:'Ibrahim Mohammed',gender:'',gen:5,parentId:17,birth:'',death:'',town:'',notes:'',by:''},{id:71,name:'Elvis Mensah',gender:'',gen:5,parentId:10,birth:'',death:'',town:'',notes:'',by:''},{id:72,name:'Lucy Mensah (Maame Aya)',gender:'',gen:5,parentId:10,birth:'',death:'',town:'',notes:'',by:''},{id:73,name:'Emmanuel Mensah (Atta)',gender:'',gen:5,parentId:10,birth:'',death:'',town:'',notes:'',by:''},{id:74,name:'Elis Mensah (Effaw)',gender:'',gen:5,parentId:10,birth:'',death:'',town:'',notes:'',by:''},{id:75,name:'Georgina Ebela Mensah',gender:'',gen:5,parentId:10,birth:'',death:'',town:'',notes:'',by:''},{id:78,name:'Yaw',gender:'',gen:5,parentId:10,birth:'',death:'',town:'',notes:'',by:''},{id:86,name:'Mother',gender:'',gen:5,parentId:81,birth:'',death:'',town:'',notes:'',by:''},{id:87,name:'Aduah',gender:'',gen:5,parentId:81,birth:'',death:'',town:'',notes:'',by:''},{id:88,name:'Thomas Cudjoe (Nana)',gender:'',gen:5,parentId:83,birth:'',death:'',town:'',notes:'',by:''},{id:89,name:'Pobi',gender:'',gen:5,parentId:83,birth:'',death:'',town:'',notes:'',by:''},{id:90,name:'Mawusi',gender:'',gen:5,parentId:83,birth:'',death:'',town:'',notes:'',by:''},{id:91,name:'Bright Andoh',gender:'',gen:5,parentId:84,birth:'',death:'',town:'',notes:'',by:''},{id:92,name:'Getrude Andoh',gender:'',gen:5,parentId:84,birth:'',death:'',town:'',notes:'',by:''},{id:93,name:'Samuella Andoh',gender:'',gen:5,parentId:84,birth:'',death:'',town:'',notes:'',by:''},{id:39,name:'Eric Armah (Ndede)',gender:'',gen:6,parentId:31,birth:'',death:'',town:'',notes:'',by:''},{id:40,name:'Comfort Armah (Aya)',gender:'',gen:6,parentId:31,birth:'',death:'',town:'',notes:'',by:''},{id:41,name:'Emmanuel Armah (Nana Cudjoe)',gender:'',gen:6,parentId:31,birth:'',death:'',town:'',notes:'',by:''},{id:42,name:'Francis Armah (Kodoo)',gender:'',gen:6,parentId:31,birth:'',death:'',town:'',notes:'',by:''},{id:43,name:'Ebenezer Armah (Ek3la)',gender:'',gen:6,parentId:31,birth:'',death:'',town:'',notes:'',by:''},{id:44,name:'Francis Armah (Assuah)',gender:'',gen:6,parentId:31,birth:'',death:'',town:'',notes:'',by:''},{id:45,name:'Patrick Armah (Ajaybu)',gender:'',gen:6,parentId:31,birth:'',death:'',town:'',notes:'',by:''},{id:46,name:'Samuel Armah (Nyamek3)',gender:'',gen:6,parentId:31,birth:'',death:'',town:'',notes:'',by:''},{id:47,name:'Monica Armah (Nrenza)',gender:'',gen:6,parentId:31,birth:'',death:'',town:'',notes:'',by:''},{id:48,name:'Elie Basi Ackah',gender:'',gen:6,parentId:32,birth:'',death:'',town:'',notes:'',by:''},{id:49,name:'Neri',gender:'',gen:6,parentId:32,birth:'',death:'',town:'',notes:'',by:''},{id:50,name:'Elia',gender:'',gen:6,parentId:32,birth:'',death:'',town:'',notes:'',by:''},{id:51,name:'Elize',gender:'',gen:6,parentId:32,birth:'',death:'',town:'',notes:'',by:''},{id:52,name:'Monique Armah-Ackah (Nrenza)',gender:'',gen:6,parentId:33,birth:'',death:'',town:'',notes:'',by:''},{id:53,name:'Alfred Armah-Ackah',gender:'',gen:6,parentId:33,birth:'',death:'',town:'',notes:'',by:''},{id:54,name:'Nana Aya',gender:'',gen:6,parentId:33,birth:'',death:'',town:'',notes:'',by:''},{id:55,name:'Nana Cudjoe Armah-Ackah',gender:'',gen:6,parentId:33,birth:'',death:'',town:'',notes:'',by:''},{id:56,name:'Nana Ek3la Armah-Ackah',gender:'',gen:6,parentId:33,birth:'',death:'',town:'',notes:'',by:''},{id:58,name:'Ayeyi Armah-Ackah',gender:'',gen:6,parentId:33,birth:'',death:'',town:'',notes:'',by:''},{id:59,name:'Ann Lyse Aya Coffie',gender:'',gen:6,parentId:35,birth:'',death:'',town:'',notes:'',by:''}];
+
+/* ═══════════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════════ */
+let members=[],selId=null,editId=null,zoomObj,svgSel,gSel,pollTimer=null;
+const NW=158,NH=66;
+const isMobile=()=>window.innerWidth<=600;
+const FIRST_VISIT_KEY='myFamilySeenHelp';
+const ADMIN_PASSWORD='FamilyTree2026';
+let isAdminMode=false;
+let changeRequests=[];
+
+/* ═══════════════════════════════════════════════════════════
+   CONNECTION STATUS
+═══════════════════════════════════════════════════════════ */
+function setConn(s,m){
+  const b=document.getElementById('connBar');
+  b.className='conn-bar '+s;
+  document.getElementById('connText').textContent=m;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   API
+═══════════════════════════════════════════════════════════ */
+async function api(url,opts={}){
+  const r=await fetch(url,{headers:{'Content-Type':'application/json'},...opts});
+  const d=await r.json();
+  if(!r.ok)throw new Error(d.error||`Server error ${r.status}`);
+  return d;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LOAD / POLL
+═══════════════════════════════════════════════════════════ */
+async function loadMembers(silent=false){
+  if(!silent)setConn('loading','Loading…');
+  try{
+    const data=await api('/api/members');
+    const prev=members.length;
+    members=data;
+    if(!silent)hideLoading();
+    setConn('ok',`Connected · ${members.length} members`);
+    updatePills();buildLegend();renderTree();
+    if(selId)renderSidebar(selId);
+    if(silent&&members.length>prev){
+      const d=members.length-prev;
+      toast(`🌱 ${d} new member${d>1?'s':''} added by someone!`,'info');
+    }
+    return true;
+  }catch(e){
+    setConn('err','Cannot reach server');
+    if(!silent)return false;
+    document.getElementById('loadingMsg').textContent='❌ Cannot reach the server. Check your internet connection.';
+    // Fall back to seed data so app is still usable offline
+    if(!members.length){members=SEED.map(x=>({...x}));hideLoading();updatePills();buildLegend();renderTree();}
+    return false;
+  }
+}
+
+function startPolling(){clearInterval(pollTimer);pollTimer=setInterval(()=>{loadMembers(true);loadChangeRequests(true);},30000);}
+window.addEventListener('focus',()=>{loadMembers(true);loadChangeRequests(true);});
+
+function hideLoading(){
+  const s=document.getElementById('loadingScreen');
+  s.classList.add('gone');
+  setTimeout(()=>s.remove(),500);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════ */
+async function init(){
+  updateHintBar();
+  const ok=await loadMembers();
+  await loadChangeRequests();
+  if(ok)startPolling();
+  // Show welcome guide on first ever visit
+  try{
+    if(!localStorage.getItem(FIRST_VISIT_KEY)){
+      localStorage.setItem(FIRST_VISIT_KEY,'1');
+      setTimeout(openHelp, 800);
+    }
+  }catch(e){}
+}
+
+function updateHintBar(){
+  document.getElementById('hintBar').textContent=
+    isMobile()?'Pinch to zoom · Drag to pan · Tap a name for details':
+               'Scroll to zoom · Drag to pan · Click any name to see details';
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RENDER TREE
+═══════════════════════════════════════════════════════════ */
+function renderTree(){
+  const cv=document.getElementById('canvas'),W=cv.clientWidth,H=cv.clientHeight;
+  svgSel=d3.select('#svg').attr('width',W).attr('height',H);
+  svgSel.selectAll('*').remove();
+  if(!members.length)return;
+
+  let root;
+  try{root=d3.stratify().id(d=>d.id).parentId(d=>d.parentId)(members);}
+  catch(e){
+    setConn('err','Tree error — a parent link is broken');
+    showOfflineBanner('⚠ The tree could not be drawn because a parent link is broken. Please check that all members have a valid parent selected.');
+    return;
+  }
+
+  const tL=d3.tree().nodeSize([NW+22,NH+78]);tL(root);
+  let x0=Infinity,x1=-Infinity;root.each(d=>{if(d.x<x0)x0=d.x;if(d.x>x1)x1=d.x;});
+  const tW=x1-x0+NW+90,tH=(root.height+1)*(NH+78)+70;
+  gSel=svgSel.append('g');
+
+  const defs=svgSel.append('defs');
+  const gf=defs.append('filter').attr('id','glow').attr('x','-30%').attr('y','-30%').attr('width','160%').attr('height','160%');
+  gf.append('feGaussianBlur').attr('stdDeviation',5).attr('result','blur');
+  const mg=gf.append('feMerge');mg.append('feMergeNode').attr('in','blur');mg.append('feMergeNode').attr('in','SourceGraphic');
+
+  zoomObj=d3.zoom().scaleExtent([0.04,4]).on('zoom',ev=>gSel.attr('transform',ev.transform));
+  svgSel.call(zoomObj).on('dblclick.zoom',null);
+  const sc=Math.min(0.9,Math.min(W/tW,H/tH));
+  svgSel.call(zoomObj.transform,d3.zoomIdentity.translate(W/2-(x0+(x1-x0)/2)*sc,40*sc).scale(sc));
+
+  // Links
+  const lp=d3.linkVertical().x(d=>d.x).y(d=>d.y);
+  gSel.selectAll('.link').data(root.links()).enter().append('path').attr('class','link')
+    .attr('d',d=>lp({source:{x:d.source.x,y:d.source.y+NH/2},target:{x:d.target.x,y:d.target.y-NH/2}}))
+    .attr('stroke',d=>gm(d.target.data.gen).color).attr('stroke-opacity',.3).attr('stroke-width',1.5);
+
+  // Nodes
+  const ng=gSel.selectAll('.node-g').data(root.descendants()).enter()
+    .append('g').attr('class',d=>'node-g'+(d.data.id===selId?' selected':''))
+    .attr('transform',d=>`translate(${d.x},${d.y})`)
+    .style('filter',d=>d.data.id===selId?'url(#glow)':null)
+    .on('click',(e,d)=>{e.stopPropagation();selectNode(d.data.id);})
+    .on('touchend',(e,d)=>{e.preventDefault();e.stopPropagation();selectNode(d.data.id);});
+
+  ng.each(function(d){
+    const g=d3.select(this),m=d.data,gmv=gm(m.gen),s=m.id===selId;
+    // Glow ring when selected
+    if(s)g.append('rect').attr('x',-NW/2-5).attr('y',-NH/2-5).attr('width',NW+10).attr('height',NH+10).attr('rx',14).attr('fill','none').attr('stroke',gmv.color).attr('stroke-width',2).attr('stroke-opacity',.7);
+    // Card bg
+    g.append('rect').attr('class','n-bg').attr('x',-NW/2).attr('y',-NH/2).attr('width',NW).attr('height',NH).attr('rx',10).attr('fill',gmv.bg).attr('stroke',gmv.color).attr('stroke-width',s?2.5:1.2).attr('stroke-opacity',s?1:.7);
+    // Left colour bar
+    g.append('rect').attr('x',-NW/2).attr('y',-NH/2).attr('width',4).attr('height',NH).attr('rx',2).attr('fill',gmv.color);
+    // Gender glyph
+    const gg=m.gender==='Female'?'♀':m.gender==='Male'?'♂':'·';
+    g.append('text').attr('x',-NW/2+13).attr('y',-7).attr('fill',gmv.color).attr('font-size',15).attr('font-family','DM Sans,sans-serif').attr('dominant-baseline','middle').text(gg);
+    // Name
+    g.append('text').attr('x',5).attr('y',-10).attr('text-anchor','middle').attr('dominant-baseline','middle').attr('font-family','Playfair Display,serif').attr('font-size',12.5).attr('font-weight',700).attr('fill','#f5ead5').text(m.name.length>17?m.name.slice(0,16)+'…':m.name);
+    // Gen label
+    g.append('text').attr('x',5).attr('y',9).attr('text-anchor','middle').attr('dominant-baseline','middle').attr('font-family','DM Mono,monospace').attr('font-size',8.5).attr('fill',gmv.color).attr('fill-opacity',.85).text(gmv.label);
+    // Years
+    if(m.birth)g.append('text').attr('x',5).attr('y',25).attr('text-anchor','middle').attr('dominant-baseline','middle').attr('font-family','DM Mono,monospace').attr('font-size',8.5).attr('fill','#7a6e5f').text(`${m.birth} – ${m.death||'present'}`);
+    // Children badge
+    const kc=d.children?d.children.length:0;
+    if(kc>0){
+      g.append('circle').attr('cx',NW/2-12).attr('cy',-NH/2+12).attr('r',12).attr('fill',gmv.color).attr('stroke',gmv.bg).attr('stroke-width',2.5);
+      g.append('text').attr('x',NW/2-12).attr('y',-NH/2+12).attr('text-anchor','middle').attr('dominant-baseline','middle').attr('fill','#fff').attr('font-size',10).attr('font-family','DM Mono,monospace').attr('font-weight','700').text(kc);
+    }
+  });
+
+  svgSel.on('click',()=>{if(selId!==null){selId=null;closeSidebar();renderTree();}});
+}
+
+function showOfflineBanner(msg){
+  const cv=document.getElementById('canvas');
+  const existing=cv.querySelector('.offline-banner');
+  if(existing)existing.remove();
+  const div=document.createElement('div');
+  div.className='offline-banner';
+  div.innerHTML=`<strong>Tree Error</strong>${msg}`;
+  cv.appendChild(div);
+}
+
+function zoomBy(f){if(svgSel)svgSel.transition().duration(260).call(zoomObj.scaleBy,f);}
+function resetView(){renderTree();}
+
+/* ═══════════════════════════════════════════════════════════
+   SIDEBAR
+═══════════════════════════════════════════════════════════ */
+function selectNode(id){
+  selId=id;renderTree();renderSidebar(id);
+  if(isMobile())setTimeout(()=>document.getElementById('sbContent').scrollTop=0,60);
+}
+
+function renderSidebar(id){
+  const m=members.find(x=>x.id===id);if(!m)return;
+  document.getElementById('sidebar').classList.add('open');
+  const gmv=gm(m.gen),par=members.find(x=>x.id===m.parentId),kids=members.filter(x=>x.parentId===m.id);
+  const isRoot=!par&&m.gen===1;
+  const isAncestor=m.gen<=0;
+
+  document.getElementById('sbContent').innerHTML=`
+    <div class="sb-top">
+      <div class="sb-badge" style="background:${gmv.color}18;color:${gmv.color};border:1px solid ${gmv.color}40">${gmv.short} · ${gmv.label}</div>
+      <button class="sb-close" onclick="closeSidebar()" title="Close">✕</button>
+    </div>
+    <div class="sb-name">${m.name}</div>
+    <div class="sb-sub">${m.gender==='Female'?'♀ Female':m.gender==='Male'?'♂ Male':'⊕ Gender not recorded'}</div>
+
+    <div class="info-grid">
+      <div class="info-box">
+        <div class="lbl">Parent</div>
+        <div class="val${par?' link':''}" onclick="${par?`selectNode(${par.id})`:''}">${par?par.name:'Not recorded'}</div>
+      </div>
+      <div class="info-box">
+        <div class="lbl">Years</div>
+        <div class="val">${m.birth?`${m.birth} – ${m.death||'present'}`:'Not recorded'}</div>
+      </div>
+      <div class="info-box">
+        <div class="lbl">Hometown</div>
+        <div class="val">${m.town||'Not recorded'}</div>
+      </div>
+      <div class="info-box">
+        <div class="lbl">Added By</div>
+        <div class="val">${m.by||'—'}</div>
+      </div>
+    </div>
+    ${m.notes?`<div class="notes-box"><div class="lbl">Notes</div><div class="val">${m.notes}</div></div>`:''}
+
+    <div class="sb-actions">
+      <button class="btn btn-gold btn-sm" onclick="openAdd(${m.id})" title="Add a child of ${m.name}">＋ Add Child</button>
+      ${isAncestor||isRoot?`<button class="btn btn-purple btn-sm" onclick="openAddAncestor(${m.id})" title="Add ${m.name}'s parent">▲ Add Parent</button>`:''}
+      ${isAdminMode?`<button class="btn btn-ghost btn-sm" onclick="openEdit(${m.id})">✎ Edit</button>`:''}
+      ${isAdminMode?`<button class="btn btn-red btn-sm" onclick="deleteMember(${m.id})">✕ Delete</button>`:''}
+      ${!isAdminMode?`<button class="btn btn-blue btn-sm" onclick="requestChange(${m.id})" title="Report an error or suggest a correction">📝 Request Change</button>`:''}
+    </div>
+
+    ${isRoot&&!par?`<div class="sb-tip"><strong>💡 Know Nana Aku's mother or father?</strong>Press <strong>▲ Add Parent</strong> above to add them. Their card will appear at the very top of the tree.</div>`:''}
+
+    ${kids.length?`
+    <div class="kids-section" style="margin-top:16px">
+      <h4>Children of ${m.name} (${kids.length})</h4>
+      ${kids.map(c=>{const cg=gm(c.gen),gi=c.gender==='Female'?'♀':c.gender==='Male'?'♂':'·';
+        return`<span class="kid-chip" onclick="selectNode(${c.id})" title="View ${c.name}" style="border-color:${cg.color}40">
+          <span style="color:${cg.color}">${gi}</span> ${c.name}
+        </span>`;}).join('')}
+    </div>`:`
+    <div style="margin-top:14px;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--ink3);text-align:center;line-height:1.5">
+      No children recorded yet.<br>Press <strong style="color:var(--gold)">＋ Add Child</strong> above to add one.
+    </div>`}
+  `;
+}
+
+function closeSidebar(){
+  selId=null;
+  document.getElementById('sidebar').classList.remove('open');
+  renderTree(true);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MODAL HELPERS
+═══════════════════════════════════════════════════════════ */
+function onGenChange(){
+  const v=parseInt(document.getElementById('f-gen').value);
+  const anc=document.getElementById('ctxAncestor');
+  const hint=document.getElementById('genHint');
+  anc.classList.toggle('show',v<=0);
+  hint.textContent = v<=0
+    ? 'You are adding someone above Nana Aku. This is for ancestors — her parents, grandparents, etc.'
+    : 'When adding a child, this is set automatically. You usually do not need to change it.';
+}
+
+function populateParent(preselect){
+  const s=document.getElementById('f-parent');
+  s.innerHTML='<option value="">— Unknown / no parent yet —</option>';
+  const sorted=[...members].sort((a,b)=>a.gen-b.gen||a.name.localeCompare(b.name));
+  sorted.forEach(m=>{
+    const o=document.createElement('option');
+    o.value=m.id;
+    o.textContent=`${m.name}  (${gm(m.gen).label.replace(' — ',' · ')})`;
+    if(m.id==preselect)o.selected=true;
+    s.appendChild(o);
+  });
+}
+
+function openAdd(pid){
+  editId=null;
+  document.getElementById('modalTitle').textContent='Add a Family Member';
+  document.getElementById('modalSub').textContent='Fill in what you know — you can always edit details later.';
+  document.getElementById('ctxAncestor').classList.remove('show');
+  ['name','birth','death','town','by'].forEach(k=>document.getElementById(`f-${k}`).value='');
+  document.getElementById('f-notes').value='';
+  document.getElementById('f-gender').value='';
+  populateParent(pid);
+  if(pid){
+    const p=members.find(x=>x.id===pid);
+    if(p){document.getElementById('f-gen').value=Math.min(p.gen+1,10);document.getElementById('f-parent').value=pid;}
+  } else {
+    document.getElementById('f-gen').value=2;
+  }
+  document.getElementById('genHint').textContent='When adding a child, this is set automatically. You usually do not need to change it.';
+  document.getElementById('saveBtn').textContent='💾 Save Member';
+  document.getElementById('overlay').classList.add('show');
+  setTimeout(()=>document.getElementById('f-name').focus(),120);
+}
+
+function openAddAncestor(childId){
+  editId=null;
+  document.getElementById('modalTitle').textContent='Add an Ancestor';
+  document.getElementById('modalSub').textContent='This person will appear above the selected person on the tree.';
+  document.getElementById('ctxAncestor').classList.add('show');
+  ['name','birth','death','town','by'].forEach(k=>document.getElementById(`f-${k}`).value='');
+  document.getElementById('f-notes').value='';
+  document.getElementById('f-gender').value='';
+  const child=members.find(x=>x.id===childId);
+  document.getElementById('f-gen').value=Math.max(-3,(child?child.gen:1)-1);
+  populateParent(null);
+  document.getElementById('f-parent').value='';
+  document.getElementById('genHint').textContent='You are adding someone above the current person. This is set to one level higher automatically.';
+  document.getElementById('saveBtn').textContent='💾 Save Ancestor';
+  document.getElementById('overlay').classList.add('show');
+  setTimeout(()=>document.getElementById('f-name').focus(),120);
+}
+
+function openEdit(id){
+  if(!isAdminMode){toast('⚠ Edit mode requires admin access. Click the 🔒 button to unlock.','err');return;}
+  const m=members.find(x=>x.id===id);if(!m)return;
+  editId=id;
+  document.getElementById('modalTitle').textContent=`Edit: ${m.name}`;
+  document.getElementById('modalSub').textContent='Update this person\'s details. All fields are optional except Name and Added By.';
+  document.getElementById('f-name').value=m.name;
+  document.getElementById('f-gender').value=m.gender||'';
+  document.getElementById('f-gen').value=m.gen;
+  document.getElementById('f-birth').value=m.birth||'';
+  document.getElementById('f-death').value=m.death||'';
+  document.getElementById('f-town').value=m.town||'';
+  document.getElementById('f-by').value=m.by||'';
+  document.getElementById('f-notes').value=m.notes||'';
+  document.getElementById('ctxAncestor').classList.toggle('show',m.gen<=0);
+  populateParent(m.parentId);
+  document.getElementById('f-parent').value=m.parentId||'';
+  document.getElementById('genHint').textContent='Change the generation only if this person is in the wrong position on the tree.';
+  document.getElementById('saveBtn').textContent='💾 Save Changes';
+  document.getElementById('overlay').classList.add('show');
+  setTimeout(()=>document.getElementById('f-name').focus(),120);
+}
+
+function closeModal(){document.getElementById('overlay').classList.remove('show');editId=null;}
+
+async function saveMember(){
+  const name=document.getElementById('f-name').value.trim();
+  const by=document.getElementById('f-by').value.trim();
+  if(!name){toast('⚠ Please enter the person\'s full name','err');document.getElementById('f-name').focus();return;}
+  if(!by){toast('⚠ Please enter your name in the "Added By" field','err');document.getElementById('f-by').focus();return;}
+  const data={name,gender:document.getElementById('f-gender').value,gen:parseInt(document.getElementById('f-gen').value),parentId:parseInt(document.getElementById('f-parent').value)||null,birth:document.getElementById('f-birth').value,death:document.getElementById('f-death').value,town:document.getElementById('f-town').value.trim(),by,notes:document.getElementById('f-notes').value.trim()};
+  const btn=document.getElementById('saveBtn');
+  btn.textContent='Saving…';btn.disabled=true;
+  try{
+    if(editId){
+      const u=await api(`/api/members/${editId}`,{method:'PUT',body:JSON.stringify(data)});
+      const i=members.findIndex(x=>x.id===editId);if(i>=0)members[i]=u;
+      selId=editId;toast('✓ Changes saved','success');
+    } else {
+      const c=await api('/api/members',{method:'POST',body:JSON.stringify(data)});
+      members.push(c);selId=c.id;toast(`✓ ${c.name} added to the tree`,'success');
+    }
+    setConn('ok',`Connected · ${members.length} members`);
+    closeModal();updatePills();buildLegend();renderTree(true);renderSidebar(selId);
+  }catch(e){toast(`⚠ ${e.message}`,'err');}
+  finally{btn.textContent=editId?'💾 Save Changes':'💾 Save Member';btn.disabled=false;}
+}
+
+async function deleteMember(id){
+  if(!isAdminMode){toast('⚠ Delete requires admin access. Click the 🔒 button to unlock.','err');return;}
+  const m=members.find(x=>x.id===id);
+  if(members.some(x=>x.parentId===id)){
+    toast(`⚠ ${m?.name||'This person'} has children on the tree. Delete or reassign their children first.`,'err');return;
+  }
+  const ok=await confirm2('🗑 Delete this member?',`"${m?.name||'This person'}" will be permanently removed from the family tree. This cannot be undone.`);
+  if(!ok)return;
+  try{
+    await api(`/api/members/${id}`,{method:'DELETE'});
+    members=members.filter(x=>x.id!==id);
+    closeSidebar();updatePills();buildLegend();renderTree();
+    setConn('ok',`Connected · ${members.length} members`);
+    toast('Deleted from the tree','info');
+  }catch(e){toast(`⚠ ${e.message}`,'err');}
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HELP MODAL
+═══════════════════════════════════════════════════════════ */
+function openHelp(){document.getElementById('helpOverlay').classList.add('show');}
+function closeHelp(){document.getElementById('helpOverlay').classList.remove('show');}
+
+/* ═══════════════════════════════════════════════════════════
+   EXPORT
+═══════════════════════════════════════════════════════════ */
+function openExport(){
+  const m=members.length,mg=m?Math.max(...members.map(x=>x.gen)):0;
+  const minG=m?Math.min(...members.map(x=>x.gen)):0;
+  const f=members.filter(x=>x.gender==='Female').length,ml=members.filter(x=>x.gender==='Male').length;
+  document.getElementById('exStats').innerHTML=
+    `<div class="stat-box"><div class="num">${m}</div><div class="lbl">Total members</div></div>`+
+    `<div class="stat-box"><div class="num">${mg-minG+1}</div><div class="lbl">Generations</div></div>`+
+    `<div class="stat-box"><div class="num">${f}</div><div class="lbl">Female</div></div>`+
+    `<div class="stat-box"><div class="num">${ml}</div><div class="lbl">Male</div></div>`;
+  document.getElementById('exOverlay').classList.add('show');
+}
+function closeEx(){document.getElementById('exOverlay').classList.remove('show');}
+function doExport(){
+  const blob=new Blob([JSON.stringify({exportDate:new Date().toISOString(),version:5,members},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  const d=new Date(),ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  a.download=`my-family-backup-${ds}.json`;a.click();URL.revokeObjectURL(a.href);
+  toast(`✓ Backup downloaded (${members.length} members)`,'success');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SEARCH
+═══════════════════════════════════════════════════════════ */
+document.getElementById('searchInput').addEventListener('input',function(){
+  const q=this.value.toLowerCase().trim();
+  if(!q){d3.selectAll('.node-g').classed('dim',false).classed('bright',false);return;}
+  const ids=new Set(members.filter(m=>m.name.toLowerCase().includes(q)||m.town.toLowerCase().includes(q)||(m.notes||'').toLowerCase().includes(q)).map(m=>m.id));
+  d3.selectAll('.node-g').each(function(d){const h=ids.has(d.data.id);d3.select(this).classed('bright',h).classed('dim',!h);});
+});
+
+/* ═══════════════════════════════════════════════════════════
+   PILLS + LEGEND
+═══════════════════════════════════════════════════════════ */
+function updatePills(){
+  if(!members.length)return;
+  const t=members.length,mg=Math.max(...members.map(m=>m.gen)),minG=Math.min(...members.map(m=>m.gen));
+  const f=members.filter(m=>m.gender==='Female').length,ml=members.filter(m=>m.gender==='Male').length;
+  document.getElementById('pills').innerHTML=
+    `<div class="pill"><b>${t}</b> members</div>`+
+    `<div class="pill"><b>${mg-minG+1}</b> gens</div>`+
+    `<div class="pill">♀<b>${f}</b> ♂<b>${ml}</b></div>`;
+}
+function buildLegend(){
+  if(!members.length)return;
+  const gs=[...new Set(members.map(m=>m.gen))].sort((a,b)=>a-b);
+  document.getElementById('legend').innerHTML=
+    '<div class="legend-hdr">Generations</div>'+
+    gs.map(g=>{const gmv=gm(g);return`<div class="leg-row"><div class="leg-dot" style="background:${gmv.color}"></div><span>${gmv.label}</span></div>`;}).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CONFIRM DIALOG
+═══════════════════════════════════════════════════════════ */
+let cfRes=null;
+function confirm2(title,msg){
+  document.getElementById('cfTitle').textContent=title;
+  document.getElementById('cfMsg').textContent=msg;
+  document.getElementById('cfOverlay').classList.add('show');
+  return new Promise(r=>{cfRes=r;});
+}
+function cfResolve(v){document.getElementById('cfOverlay').classList.remove('show');if(cfRes){cfRes(v);cfRes=null;}}
+
+/* ═══════════════════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════════════════ */
+let tTimer;
+function toast(msg,type='info'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className=`toast ${type} show`;
+  clearTimeout(tTimer);
+  tTimer=setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SWIPE DOWN CLOSES SIDEBAR (mobile)
+═══════════════════════════════════════════════════════════ */
+let ty0=0;
+document.getElementById('sidebar').addEventListener('touchstart',e=>{ty0=e.touches[0].clientY;},{passive:true});
+document.getElementById('sidebar').addEventListener('touchend',e=>{if(e.changedTouches[0].clientY-ty0>70)closeSidebar();},{passive:true});
+
+/* ═══════════════════════════════════════════════════════════
+   GLOBAL EVENTS
+═══════════════════════════════════════════════════════════ */
+['overlay','exOverlay','helpOverlay','cfOverlay','requestsOverlay'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',function(e){
+    if(e.target===this){
+      if(id==='overlay')closeModal();
+      else if(id==='exOverlay')closeEx();
+      else if(id==='helpOverlay')closeHelp();
+      else if(id==='cfOverlay')cfResolve(false);
+      else if(id==='requestsOverlay')closeRequests();
+    }
+  });
+});
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){closeModal();closeEx();closeHelp();closeSidebar();}
+  if((e.key==='f'||e.key==='F')&&(e.ctrlKey||e.metaKey)){e.preventDefault();document.getElementById('searchInput').focus();}
+  if(e.key==='?'){openHelp();}
+});
+
+let rt;
+window.addEventListener('resize',()=>{
+  clearTimeout(rt);
+  rt=setTimeout(()=>{updateHintBar();renderTree();},150);
+});
+
+/* ═══════════════════════════════════════════════════════════
+   CHANGE REQUESTS
+═══════════════════════════════════════════════════════════ */
+async function loadChangeRequests(silent=false){
+  try{
+    const data=await api('/api/change-requests');
+    changeRequests=data;
+    updateRequestsBadge();
+  }catch(e){
+    if(!silent)console.error('Failed to load change requests:',e);
+  }
+}
+
+function updateRequestsBadge(){
+  const pending=changeRequests.filter(r=>r.status==='pending').length;
+  const badge=document.getElementById('requestsBadge');
+  const btn=document.getElementById('requestsBtn');
+  if(pending>0){
+    badge.textContent=pending;
+    badge.style.display='block';
+    btn.title=`${pending} pending change request${pending>1?'s':''}`;
+  }else{
+    badge.style.display='none';
+    btn.title='View change requests';
+  }
+}
+
+async function requestChange(id){
+  const m=members.find(x=>x.id===id);
+  if(!m)return;
+  const issue=prompt(`📝 Suggest a correction for "${m.name}":\n\nDescribe what needs to be changed (name spelling, birth year, parent link, etc.):`);
+  if(!issue||!issue.trim())return;
+  const requester=prompt('Your name (so the admin knows who to contact):');
+  if(!requester||!requester.trim())return;
+  
+  try{
+    await api('/api/change-requests',{
+      method:'POST',
+      body:JSON.stringify({
+        memberId:m.id,
+        memberName:m.name,
+        issue:issue.trim(),
+        requestedBy:requester.trim()
+      })
+    });
+    toast('✓ Change request submitted! The admin will review it.','success');
+    await loadChangeRequests();
+  }catch(e){
+    toast(`⚠ ${e.message}`,'err');
+  }
+}
+
+function openChangeRequests(){
+  const list=document.getElementById('requestsList');
+  const pending=changeRequests.filter(r=>r.status==='pending');
+  const resolved=changeRequests.filter(r=>r.status!=='pending');
+  
+  if(changeRequests.length===0){
+    list.innerHTML='<div style="padding:40px;text-align:center;color:var(--ink3);font-size:13px">No change requests yet.<br><br>Family members can click <strong>📝 Request Change</strong> on any member card to suggest corrections.</div>';
+  }else{
+    let html='';
+    if(pending.length>0){
+      html+='<div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:DM Mono,monospace">⚠ Pending Requests ('+pending.length+')</div>';
+      pending.forEach(r=>{
+        const d=new Date(r.created_at);
+        html+=`<div style="background:var(--card);border:1px solid #2e9fb5;border-radius:8px;padding:12px;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:6px">
+            <strong style="color:var(--ink);font-size:13px">${r.member_name}</strong>
+            <span style="font-size:10px;color:var(--ink3);font-family:DM Mono,monospace">${d.toLocaleDateString()}</span>
+          </div>
+          <div style="font-size:11.5px;color:var(--ink2);line-height:1.5;margin-bottom:8px">${r.issue}</div>
+          <div style="font-size:10px;color:var(--ink3);margin-bottom:10px">Requested by: <strong style="color:var(--ink2)">${r.requested_by}</strong></div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-ghost btn-sm" onclick="viewMember(${r.member_id})">👁 View Member</button>
+            <button class="btn btn-green btn-sm" onclick="resolveRequest(${r.id},'resolved')">✓ Mark Resolved</button>
+            <button class="btn btn-red btn-sm" onclick="resolveRequest(${r.id},'dismissed')">✕ Dismiss</button>
+          </div>
+        </div>`;
+      });
+    }
+    if(resolved.length>0){
+      html+='<div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin:16px 0 8px;font-family:DM Mono,monospace">✓ Resolved/Dismissed ('+resolved.length+')</div>';
+      resolved.forEach(r=>{
+        const d=new Date(r.created_at);
+        const badge=r.status==='resolved'?'<span style="background:#3a9e6f22;color:#5ddb9e;padding:2px 8px;border-radius:12px;font-size:9px;font-weight:600">✓ RESOLVED</span>':'<span style="background:#c0392b22;color:#e57373;padding:2px 8px;border-radius:12px;font-size:9px;font-weight:600">✕ DISMISSED</span>';
+        html+=`<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;opacity:.6">
+          <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:6px">
+            <strong style="color:var(--ink);font-size:13px">${r.member_name}</strong>
+            ${badge}
+          </div>
+          <div style="font-size:11.5px;color:var(--ink2);line-height:1.5;margin-bottom:4px">${r.issue}</div>
+          <div style="font-size:10px;color:var(--ink3)">By: ${r.requested_by} · ${d.toLocaleDateString()}</div>
+        </div>`;
+      });
+    }
+    list.innerHTML=html;
+  }
+  document.getElementById('requestsOverlay').classList.add('show');
+}
+
+function closeRequests(){
+  document.getElementById('requestsOverlay').classList.remove('show');
+}
+
+function viewMember(id){
+  closeRequests();
+  selectNode(id);
+}
+
+async function resolveRequest(reqId,status){
+  try{
+    await api(`/api/change-requests/${reqId}`,{
+      method:'PUT',
+      body:JSON.stringify({status,resolvedBy:'Admin'})
+    });
+    toast(status==='resolved'?'✓ Request marked as resolved':'Request dismissed','info');
+    await loadChangeRequests();
+    openChangeRequests();
+  }catch(e){
+    toast(`⚠ ${e.message}`,'err');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ADMIN MODE
+═══════════════════════════════════════════════════════════ */
+function toggleAdminMode(){
+  const btn=document.getElementById('adminBtn');
+  if(isAdminMode){
+    isAdminMode=false;
+    btn.textContent='🔒';
+    btn.title='Admin mode (edit/delete)';
+    btn.style.background='';
+    toast('👁 Viewer mode: Edit/Delete locked','info');
+    if(selId)renderSidebar(selId);
+  } else {
+    const pw=prompt('🔐 Enter admin password to unlock Edit and Delete:');
+    if(pw===ADMIN_PASSWORD){
+      isAdminMode=true;
+      btn.textContent='🔓';
+      btn.title='Click to lock admin mode';
+      btn.style.background='var(--gold)';
+      btn.style.color='#0f0a03';
+      toast('✓ Admin mode unlocked','success');
+      if(selId)renderSidebar(selId);
+    } else if(pw!==null){
+      toast('⚠ Incorrect password','err');
+    }
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   THEME TOGGLE
+═══════════════════════════════════════════════════════════ */
+function toggleTheme(){
+  const html=document.documentElement;
+  const btn=document.getElementById('themeBtn');
+  const current=html.getAttribute('data-theme');
+  if(current==='light'){
+    html.removeAttribute('data-theme');
+    btn.textContent='☀';
+    btn.title='Switch to light mode';
+    try{localStorage.setItem('myFamilyTheme','dark');}catch(e){}
+  } else {
+    html.setAttribute('data-theme','light');
+    btn.textContent='🌙';
+    btn.title='Switch to dark mode';
+    try{localStorage.setItem('myFamilyTheme','light');}catch(e){}
+  }
+}
+
+function loadTheme(){
+  try{
+    const saved=localStorage.getItem('myFamilyTheme');
+    if(saved==='light'){
+      document.documentElement.setAttribute('data-theme','light');
+      document.getElementById('themeBtn').textContent='🌙';
+      document.getElementById('themeBtn').title='Switch to dark mode';
+    }
+  }catch(e){}
+}
+
+/* ═══════════════════════════════════════════════════════════
+   START
+═══════════════════════════════════════════════════════════ */
+loadTheme();
+init();
+</script>
+</body>
+</html>
