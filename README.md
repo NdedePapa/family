@@ -86,16 +86,21 @@ For simplicity, **Railway is recommended** for MySQL.
 # 2. Install dependencies
 npm install
 
-# 3. Create your .env file
-cp .env.example .env
-nano .env   # fill in your MySQL credentials
-
-# 4. Create the database and seed data
-mysql -u root -p < schema.sql
-
-# 5. Start the server
-npm start
-```
+# 3. **Configure environment variables**
+   ```bash
+   cp .env.example .env
+   ```
+   Edit `.env` and update your MySQL credentials and admin password:
+   ```
+   DB_HOST=localhost
+   DB_PORT=3306
+   DB_USER=root
+   DB_PASSWORD=your_mysql_password
+   DB_NAME=family_tree
+   PORT=3000
+   ADMIN_PASSWORD=YourSecurePasswordHere
+   ```
+   ⚠️ **Important**: Change `ADMIN_PASSWORD` to a secure password for production!
 
 To keep it running permanently, use PM2:
 ```bash

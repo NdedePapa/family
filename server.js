@@ -207,6 +207,51 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Admin authentication
+app.post('/api/auth/verify', (req, res) => {
+  const { password } = req.body;
+  const adminPassword = process.env.ADMIN_PASSWORD || 'FamilyTree2026';
+  if (password === adminPassword) {
+    res.json({ valid: true });
+  } else {
+    res.status(401).json({ valid: false, error: 'Invalid password' });
+  }
+});
+
+// Import members (restore from backup)
+app.post('/api/import', async (req, res) => {
+  const { members, password } = req.body;
+  const adminPassword = process.env.ADMIN_PASSWORD || 'FamilyTree2026';
+  
+  if (password !== adminPassword) {
+    return res.status(401).json({ error: 'Admin password required for import' });
+  }
+  
+  if (!Array.isArray(members) || members.length === 0) {
+    return res.status(400).json({ error: 'Invalid import data' });
+  }
+  
+  try {
+    await pool.query('SET FOREIGN_KEY_CHECKS = 0');
+    await pool.query('TRUNCATE TABLE members');
+    
+    for (const m of members) {
+      await pool.query(
+        `INSERT INTO members (id, name, gender, gen, parent_id, birth_year, death_year, hometown, notes, added_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [m.id, m.name, m.gender || '', m.gen, m.parentId || null, m.birth || '', m.death || '', m.town || '', m.notes || '', m.by || '']
+      );
+    }
+    
+    await pool.query('SET FOREIGN_KEY_CHECKS = 1');
+    const [rows] = await pool.query('SELECT * FROM members ORDER BY gen ASC, id ASC');
+    res.json({ success: true, count: rows.length, members: rows.map(toFront) });
+  } catch (e) {
+    console.error('POST /api/import', e.message);
+    res.status(500).json({ error: 'Import failed: ' + e.message });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🌳 My Family Tree server → http://localhost:${PORT}`);
