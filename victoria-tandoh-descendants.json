@@ -1,0 +1,129 @@
+{
+  "exportDate": "2026-04-07T23:04:00.000Z",
+  "version": 5,
+  "description": "Victoria Tandoh's children and grandchildren - Import this file using the Import button",
+  "instructions": "Before importing: Find Victoria Tandoh in your tree and note her ID. Then update all 'parentId' values in the children section to match her ID.",
+  "members": [
+    {
+      "name": "Hagar Alhassan (Hajara)",
+      "gender": "Female",
+      "gen": 3,
+      "parentId": null,
+      "birth": "",
+      "death": "",
+      "town": "",
+      "notes": "School name: Hagar Alhassan, Home name: Hajara",
+      "by": "Family Data Entry"
+    },
+    {
+      "name": "Mercy Alhassan (Ramatu)",
+      "gender": "Female",
+      "gen": 3,
+      "parentId": null,
+      "birth": "",
+      "death": "",
+      "town": "",
+      "notes": "School name: Mercy Alhassan, Home name: Ramatu",
+      "by": "Family Data Entry"
+    },
+    {
+      "name": "Alhaji Ibrahim Cobbinah",
+      "gender": "Male",
+      "gen": 3,
+      "parentId": null,
+      "birth": "",
+      "death": "",
+      "town": "",
+      "notes": "School name: Alhaji Ibrahim Cobbinah, Home name: Alhaji",
+      "by": "Family Data Entry"
+    },
+    {
+      "name": "Kadijah Alhassan",
+      "gender": "Female",
+      "gen": 3,
+      "parentId": null,
+      "birth": "",
+      "death": "",
+      "town": "",
+      "notes": "School name: Kadijah Alhassan, Home name: Kadijah",
+      "by": "Family Data Entry"
+    },
+    {
+      "name": "Abudulai Alhassan",
+      "gender": "Male",
+      "gen": 3,
+      "parentId": null,
+      "birth": "",
+      "death": "",
+      "town": "",
+      "notes": "School name: Abudulai Alhassan, Home name: Abudulai",
+      "by": "Family Data Entry"
+    },
+    {
+      "name": "Fadima Alhassan",
+      "gender": "Female",
+      "gen": 3,
+      "parentId": null,
+      "birth": "",
+      "death": "",
+      "town": "",
+      "notes": "School name: Fadima Alhassan, Home name: Fadima",
+      "by": "Family Data Entry"
+    },
+    {
+      "name": "Samuel Kojo Kuma Quainoo",
+      "gender": "Male",
+      "gen": 4,
+      "parentId": "HAGAR_ID",
+      "birth": "",
+      "death": "",
+      "town": "",
+      "notes": "Child of Hagar Alhassan (Hajara)",
+      "by": "Family Data Entry"
+    },
+    {
+      "name": "Joseph Quainoo",
+      "gender": "Male",
+      "gen": 4,
+      "parentId": "HAGAR_ID",
+      "birth": "",
+      "death": "",
+      "town": "",
+      "notes": "Child of Hagar Alhassan (Hajara)",
+      "by": "Family Data Entry"
+    },
+    {
+      "name": "Hafiza Alhassan",
+      "gender": "Female",
+      "gen": 4,
+      "parentId": "KADIJAH_ID",
+      "birth": "",
+      "death": "",
+      "town": "",
+      "notes": "Child of Kadijah Alhassan",
+      "by": "Family Data Entry"
+    },
+    {
+      "name": "Alfred Beikwa",
+      "gender": "Male",
+      "gen": 4,
+      "parentId": "KADIJAH_ID",
+      "birth": "",
+      "death": "",
+      "town": "",
+      "notes": "Child of Kadijah Alhassan",
+      "by": "Family Data Entry"
+    },
+    {
+      "name": "Ernestina Bekwaw",
+      "gender": "Female",
+      "gen": 4,
+      "parentId": "KADIJAH_ID",
+      "birth": "",
+      "death": "",
+      "town": "",
+      "notes": "Child of Kadijah Alhassan",
+      "by": "Family Data Entry"
+    }
+  ]
+}

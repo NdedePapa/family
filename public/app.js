@@ -30,6 +30,7 @@ const FIRST_VISIT_KEY='myFamilySeenHelp';
 let isAdminMode=false;
 let changeRequests=[];
 let ancestorChildId=null; // Track which child we're adding a parent for
+let matrilinealOnly=false; // Filter to show only female lineage
 
 /* ─── SEED DATA (Fallback) ────────────────────────────────── */
 const SEED=[{id:1,name:'Nana Aku',gender:'Female',gen:1,parentId:null,birth:'',death:'',town:'',notes:'Family matriarch',by:''}];
@@ -137,8 +138,35 @@ function renderTree(){
   svgSel.selectAll('*').remove();
   if(!members.length)return;
 
+  // Apply matrilineal filter if enabled
+  let filteredMembers = members;
+  if(matrilinealOnly){
+    // Build matrilineal lineage: females and their direct children
+    const includedIds = new Set();
+    
+    // Helper to check if member is connected to a female ancestor
+    function hasFemaleLine(memberId, visited = new Set()) {
+      if(visited.has(memberId)) return false;
+      visited.add(memberId);
+      
+      const member = members.find(m => m.id === memberId);
+      if(!member) return false;
+      if(member.gender === 'Female') return true;
+      if(!member.parentId) return false;
+      
+      const parent = members.find(m => m.id === member.parentId);
+      if(!parent) return false;
+      if(parent.gender === 'Female') return true;
+      
+      return hasFemaleLine(member.parentId, visited);
+    }
+    
+    // Include all members in female lineage
+    filteredMembers = members.filter(m => hasFemaleLine(m.id));
+  }
+
   let root;
-  try{root=d3.stratify().id(d=>d.id).parentId(d=>d.parentId)(members);}
+  try{root=d3.stratify().id(d=>d.id).parentId(d=>d.parentId)(filteredMembers);}
   catch(e){setConn('err','Tree error');return;}
 
   const tL=d3.tree().nodeSize([NW+22,NH+78]);tL(root);
@@ -949,6 +977,26 @@ function loadTheme(){
       document.getElementById('themeBtn').textContent='🌙';
     }
   }catch(e){}
+}
+
+/* ─── MATRILINEAL FILTER ────────────────────────────────── */
+function toggleMatrilineal(){
+  const btn=document.getElementById('matriBtn');
+  matrilinealOnly=!matrilinealOnly;
+  
+  if(matrilinealOnly){
+    btn.style.background='var(--gold)';
+    btn.style.color='#0f0a03';
+    btn.title='Showing matrilineal lineage only (click to show all)';
+    toast('👩 Showing female lineage only','info');
+  } else {
+    btn.style.background='';
+    btn.style.color='';
+    btn.title='Show matrilineal lineage only';
+    toast('👥 Showing all members','info');
+  }
+  
+  renderTree();
 }
 
 /* ─── MOBILE SWIPE ──────────────────────────────────────── */
