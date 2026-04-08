@@ -89,9 +89,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);d
   50%{filter:brightness(1.55) drop-shadow(0 0 8px currentColor)}
 }
 @keyframes highlight-pop{
-  0%{transform:scale(1)}
-  50%{transform:scale(1.12)}
-  100%{transform:scale(1)}
+  0%{filter:brightness(1.5) saturate(1.2)}
+  50%{filter:brightness(1.7) saturate(1.4) drop-shadow(0 0 6px currentColor)}
+  100%{filter:brightness(1.5) saturate(1.2)}
 }
 
 /* ─── Canvas overlays ───────────────────────────────────── */
