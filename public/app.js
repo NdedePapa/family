@@ -743,13 +743,175 @@ async function doImport(){
   }
 }
 
-/* ─── SEARCH ────────────────────────────────────────────── */
-document.addEventListener('DOMContentLoaded',()=>{
-  document.getElementById('searchInput').addEventListener('input',function(){
-    const q=this.value.toLowerCase().trim();
-    if(!q){d3.selectAll('.node-g').classed('dim',false).classed('bright',false);return;}
-    const ids=new Set(members.filter(m=>m.name.toLowerCase().includes(q)||m.town.toLowerCase().includes(q)||(m.notes||'').toLowerCase().includes(q)).map(m=>m.id));
-    d3.selectAll('.node-g').each(function(d){const h=ids.has(d.data.id);d3.select(this).classed('bright',h).classed('dim',!h);});
+/* ─── ENHANCED SEARCH ───────────────────────────────────── */
+let searchResults = [];
+let currentResultIndex = -1;
+let searchDebounceTimer = null;
+
+function performSearch(query) {
+  const q = query.toLowerCase().trim();
+  const searchInput = document.getElementById('searchInput');
+  const clearBtn = document.getElementById('searchClear');
+  const resultsDiv = document.getElementById('searchResults');
+  const resultsCount = document.getElementById('resultsCount');
+  
+  // Clear state if empty query
+  if (!q) {
+    searchResults = [];
+    currentResultIndex = -1;
+    d3.selectAll('.node-g').classed('dim', false).classed('bright', false).classed('search-current', false);
+    clearBtn.style.display = 'none';
+    resultsDiv.style.display = 'none';
+    return;
+  }
+  
+  // Show clear button
+  clearBtn.style.display = 'block';
+  
+  // Perform search across name, town, and notes
+  const matches = members.filter(m => 
+    m.name.toLowerCase().includes(q) || 
+    m.town.toLowerCase().includes(q) || 
+    (m.notes || '').toLowerCase().includes(q)
+  );
+  
+  searchResults = matches.map(m => m.id);
+  
+  // Update UI based on results
+  if (searchResults.length === 0) {
+    // No results found
+    resultsDiv.style.display = 'none';
+    d3.selectAll('.node-g').classed('dim', true).classed('bright', false).classed('search-current', false);
+    searchInput.style.borderColor = '#e57373';
+    toast('No matches found', 'info');
+  } else {
+    // Results found
+    searchInput.style.borderColor = '';
+    resultsCount.textContent = `${searchResults.length} ${searchResults.length === 1 ? 'match' : 'matches'}`;
+    resultsDiv.style.display = 'flex';
+    
+    // Highlight all matches
+    const matchIds = new Set(searchResults);
+    d3.selectAll('.node-g').each(function(d) {
+      const isMatch = matchIds.has(d.data.id);
+      d3.select(this).classed('bright', isMatch).classed('dim', !isMatch).classed('search-current', false);
+    });
+    
+    // Auto-focus first result
+    currentResultIndex = 0;
+    highlightCurrentResult();
+  }
+  
+  updateNavigationButtons();
+}
+
+function highlightCurrentResult() {
+  if (currentResultIndex < 0 || currentResultIndex >= searchResults.length) return;
+  
+  const currentId = searchResults[currentResultIndex];
+  
+  // Update visual highlighting
+  d3.selectAll('.node-g').classed('search-current', false);
+  d3.selectAll('.node-g').each(function(d) {
+    if (d.data.id === currentId) {
+      d3.select(this).classed('search-current', true);
+      
+      // Center on this node with smooth animation
+      const node = d3.select(this);
+      const transform = node.attr('transform');
+      const match = transform.match(/translate\(([^,]+),([^)]+)\)/);
+      if (match && svgSel && zoomObj) {
+        const x = parseFloat(match[1]);
+        const y = parseFloat(match[2]);
+        const cv = document.getElementById('canvas');
+        const W = cv.clientWidth;
+        const H = cv.clientHeight;
+        const scale = currentTransform ? currentTransform.k : 1;
+        
+        // Smooth pan to center the node
+        const newTransform = d3.zoomIdentity
+          .translate(W/2 - x * scale, H/2 - y * scale)
+          .scale(scale);
+        
+        svgSel.transition()
+          .duration(400)
+          .call(zoomObj.transform, newTransform);
+      }
+    }
+  });
+  
+  // Update counter
+  const resultsCount = document.getElementById('resultsCount');
+  resultsCount.textContent = `${currentResultIndex + 1} of ${searchResults.length}`;
+}
+
+function navigateResults(direction) {
+  if (searchResults.length === 0) return;
+  
+  currentResultIndex += direction;
+  
+  // Wrap around
+  if (currentResultIndex < 0) currentResultIndex = searchResults.length - 1;
+  if (currentResultIndex >= searchResults.length) currentResultIndex = 0;
+  
+  highlightCurrentResult();
+  updateNavigationButtons();
+}
+
+function updateNavigationButtons() {
+  const prevBtn = document.getElementById('prevResult');
+  const nextBtn = document.getElementById('nextResult');
+  
+  if (searchResults.length <= 1) {
+    prevBtn.disabled = true;
+    nextBtn.disabled = true;
+  } else {
+    prevBtn.disabled = false;
+    nextBtn.disabled = false;
+  }
+}
+
+function clearSearch() {
+  const searchInput = document.getElementById('searchInput');
+  searchInput.value = '';
+  searchInput.focus();
+  performSearch('');
+}
+
+// Initialize search on DOM load
+document.addEventListener('DOMContentLoaded', () => {
+  const searchInput = document.getElementById('searchInput');
+  
+  // Debounced search on input
+  searchInput.addEventListener('input', function() {
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+      performSearch(this.value);
+    }, 250); // 250ms debounce for better performance
+  });
+  
+  // Keyboard shortcuts
+  searchInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (e.shiftKey) {
+        navigateResults(-1); // Shift+Enter: previous
+      } else {
+        navigateResults(1); // Enter: next
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      clearSearch();
+    }
+  });
+  
+  // Global keyboard shortcut: Ctrl+K or Cmd+K to focus search
+  document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      searchInput.focus();
+      searchInput.select();
+    }
   });
 });
 

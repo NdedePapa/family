@@ -24,7 +24,13 @@
   <div class="logo">My <em>Family</em></div>
   <div class="hdr-search">
     <span class="si">⌕</span>
-    <input id="searchInput" type="text" placeholder="Search…" autocomplete="off">
+    <input id="searchInput" type="text" placeholder="Search by name, town, or notes…" autocomplete="off" aria-label="Search family members">
+    <button class="search-clear" id="searchClear" onclick="clearSearch()" title="Clear search (Esc)" style="display:none">✕</button>
+    <div class="search-results" id="searchResults" style="display:none">
+      <span class="results-count" id="resultsCount"></span>
+      <button class="result-nav" id="prevResult" onclick="navigateResults(-1)" title="Previous result (Shift+Enter)">↑</button>
+      <button class="result-nav" id="nextResult" onclick="navigateResults(1)" title="Next result (Enter)">↓</button>
+    </div>
   </div>
   <div class="conn-bar loading" id="connBar">
     <div class="conn-dot"></div>
