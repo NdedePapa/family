@@ -2,3 +2,23 @@ node_modules/
 .env
 *.log
 .DS_Store
+
+# Temporary SQL dumps and database exports
+*.sql
+!schema.sql
+
+# Migration and data fix scripts
+add-*.js
+check-*.js
+export-*.js
+fix-*.js
+list-*.js
+final-*.js
+restore-*.js
+verify-*.js
+
+# Temporary data files
+*-descendants.json
+*.md
+!README.md
+!CHANGELOG.md

@@ -23,7 +23,7 @@ const GM = {
 function gm(g){ return GM[g]||GM[String(g)]||GM[4]; }
 
 /* ─── STATE ─────────────────────────────────────────────── */
-let members=[], selId=null, editId=null, zoomObj, svgSel, gSel, pollTimer=null;
+let members=[], selId=null, editId=null, zoomObj, svgSel, gSel, pollTimer=null, currentTransform=null;
 const NW=158, NH=66;
 const isMobile=()=>window.innerWidth<=600;
 const FIRST_VISIT_KEY='myFamilySeenHelp';
@@ -86,7 +86,7 @@ async function loadMembers(silent=false){
     members=data;
     if(!silent)hideLoading();
     setConn('ok',t('connOk',{count:members.length}));
-    updatePills();buildLegend();renderTree();
+    updatePills();buildLegend();renderTree(silent);
     if(selId)renderSidebar(selId);
     if(silent&&members.length>prev){
       const d=members.length-prev;
@@ -96,7 +96,7 @@ async function loadMembers(silent=false){
   }catch(e){
     setConn('err',t('connError'));
     if(!silent)document.getElementById('loadingMsg').textContent='❌ '+t('connError');
-    if(!members.length){members=SEED.map(x=>({...x}));hideLoading();updatePills();buildLegend();renderTree();}
+    if(!members.length){members=SEED.map(x=>({...x}));hideLoading();updatePills();buildLegend();renderTree(false);}
     return false;
   }
 }
@@ -132,7 +132,7 @@ async function init(){
 }
 
 /* ─── RENDER TREE ───────────────────────────────────────── */
-function renderTree(){
+function renderTree(preserveZoom=false){
   const cv=document.getElementById('canvas'),W=cv.clientWidth,H=cv.clientHeight;
   svgSel=d3.select('#svg').attr('width',W).attr('height',H);
   svgSel.selectAll('*').remove();
@@ -141,33 +141,72 @@ function renderTree(){
   // Apply matrilineal filter if enabled
   let filteredMembers = members;
   if(matrilinealOnly){
-    // Build matrilineal lineage: females and their direct children
+    // Build matrilineal lineage: trace through female ancestors only
     const includedIds = new Set();
     
-    // Helper to check if member is connected to a female ancestor
-    function hasFemaleLine(memberId, visited = new Set()) {
-      if(visited.has(memberId)) return false;
-      visited.add(memberId);
-      
-      const member = members.find(m => m.id === memberId);
-      if(!member) return false;
-      if(member.gender === 'Female') return true;
-      if(!member.parentId) return false;
-      
-      const parent = members.find(m => m.id === member.parentId);
-      if(!parent) return false;
-      if(parent.gender === 'Female') return true;
-      
-      return hasFemaleLine(member.parentId, visited);
+    // Add members iteratively to build matrilineal line
+    // Start with root females (no parent or parent not in dataset)
+    members.forEach(m => {
+      if(!m.parentId){
+        // Root member with no parent - include if female
+        if(m.gender === 'Female'){
+          includedIds.add(m.id);
+        }
+      }
+    });
+    
+    // Iteratively add children of females until no more can be added
+    let added = true;
+    while(added){
+      added = false;
+      members.forEach(m => {
+        if(!includedIds.has(m.id) && m.parentId){
+          const parent = members.find(p => p.id === m.parentId);
+          // Add if parent is female AND parent is in the matrilineal line
+          if(parent && parent.gender === 'Female' && includedIds.has(parent.id)){
+            includedIds.add(m.id);
+            added = true;
+          }
+        }
+      });
     }
     
-    // Include all members in female lineage
-    filteredMembers = members.filter(m => hasFemaleLine(m.id));
+    // Filter members and fix parent references
+    filteredMembers = members
+      .filter(m => includedIds.has(m.id))
+      .map(m => {
+        // Connect to virtual root if: no parent OR parent not in filtered set
+        if(!m.parentId || (m.parentId && !includedIds.has(m.parentId))){
+          return {...m, parentId: 'virtual_root'};
+        }
+        return m;
+      });
+    
+    // Add virtual root node to connect all orphaned branches
+    filteredMembers.unshift({
+      id: 'virtual_root',
+      name: 'Matrilineal Lineage',
+      gender: 'Female',
+      gen: -10,
+      parentId: null,
+      birth: '',
+      death: '',
+      town: '',
+      notes: '',
+      by: '',
+      isVirtual: true
+    });
   }
 
   let root;
   try{root=d3.stratify().id(d=>d.id).parentId(d=>d.parentId)(filteredMembers);}
-  catch(e){setConn('err','Tree error');return;}
+  catch(e){
+    console.error('D3 Stratify Error:', e);
+    console.log('Filtered Members:', filteredMembers);
+    setConn('err',`Tree error: ${e.message}`);
+    toast(`⚠ Tree error: ${e.message}`,'err');
+    return;
+  }
 
   const tL=d3.tree().nodeSize([NW+22,NH+78]);tL(root);
   let x0=Infinity,x1=-Infinity;root.each(d=>{if(d.x<x0)x0=d.x;if(d.x>x1)x1=d.x;});
@@ -179,14 +218,25 @@ function renderTree(){
   gf.append('feGaussianBlur').attr('stdDeviation',5).attr('result','blur');
   const mg=gf.append('feMerge');mg.append('feMergeNode').attr('in','blur');mg.append('feMergeNode').attr('in','SourceGraphic');
 
-  zoomObj=d3.zoom().scaleExtent([0.04,4]).on('zoom',ev=>gSel.attr('transform',ev.transform));
+  zoomObj=d3.zoom().scaleExtent([0.04,4]).on('zoom',ev=>{
+    gSel.attr('transform',ev.transform);
+    currentTransform=ev.transform;
+  });
   svgSel.call(zoomObj).on('dblclick.zoom',null);
-  const baseScale=Math.min(0.9,Math.min(W/tW,H/tH));
-  // Mobile: prioritize readability over fitting entire tree - start at 0.7x minimum
-  const sc=isMobile()?Math.max(0.7,Math.min(1.2,baseScale*1.5)):baseScale;
-  // Center on root node (matriarch) instead of middle of tree - show top hierarchy
-  const topY=isMobile()?80:60;
-  svgSel.call(zoomObj.transform,d3.zoomIdentity.translate(W/2-root.x*sc,topY*sc).scale(sc));
+  
+  // Restore previous zoom or set default
+  if(preserveZoom && currentTransform){
+    svgSel.call(zoomObj.transform,currentTransform);
+  } else {
+    const baseScale=Math.min(0.9,Math.min(W/tW,H/tH));
+    // Mobile: prioritize readability over fitting entire tree - start at 0.7x minimum
+    const sc=isMobile()?Math.max(0.7,Math.min(1.2,baseScale*1.5)):baseScale;
+    // Center on root node (matriarch) instead of middle of tree - show top hierarchy
+    const topY=isMobile()?80:60;
+    const newTransform=d3.zoomIdentity.translate(W/2-root.x*sc,topY*sc).scale(sc);
+    svgSel.call(zoomObj.transform,newTransform);
+    currentTransform=newTransform;
+  }
 
   const lp=d3.linkVertical().x(d=>d.x).y(d=>d.y);
   gSel.selectAll('.link').data(root.links()).enter().append('path').attr('class','link')
@@ -231,17 +281,17 @@ function resetView(){renderTree();}
 
 /* ─── SIDEBAR ───────────────────────────────────────────── */
 function selectNode(id){
-  selId=id;renderTree();renderSidebar(id);
+  selId=id;renderTree(true);renderSidebar(id);
   if(isMobile()){
     setTimeout(()=>document.getElementById('sbContent').scrollTop=0,60);
     // Gentle haptic feedback on mobile
     if(navigator.vibrate)navigator.vibrate(10);
+    // Smooth scroll to selected node in view (mobile only)
+    setTimeout(()=>{
+      const selectedNode=document.querySelector('.node-g.selected');
+      if(selectedNode)selectedNode.scrollIntoView({behavior:'smooth',block:'center',inline:'center'});
+    },100);
   }
-  // Smooth scroll to selected node in view
-  setTimeout(()=>{
-    const selectedNode=document.querySelector('.node-g.selected');
-    if(selectedNode)selectedNode.scrollIntoView({behavior:'smooth',block:'center',inline:'center'});
-  },100);
 }
 
 function renderSidebar(id){
@@ -610,7 +660,7 @@ async function deleteMember(id){
   try{
     await api(`/api/members/${id}`,{method:'DELETE'});
     members=members.filter(x=>x.id!==id);
-    closeSidebar();updatePills();buildLegend();renderTree();
+    closeSidebar();updatePills();buildLegend();renderTree(true);
     setConn('ok',t('connOk',{count:members.length}));
     toast(t('toastDeleted'),'info');
   }catch(e){toast(`⚠ ${e.message}`,'err');}
@@ -996,7 +1046,7 @@ function toggleMatrilineal(){
     toast('👥 Showing all members','info');
   }
   
-  renderTree();
+  renderTree(true);
 }
 
 /* ─── MOBILE SWIPE ──────────────────────────────────────── */
@@ -1030,7 +1080,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   let rt;
   window.addEventListener('resize',()=>{
     clearTimeout(rt);
-    rt=setTimeout(()=>{updateHintBar();renderTree();},150);
+    rt=setTimeout(()=>{updateHintBar();renderTree(true);},150);
   });
 
   window.addEventListener('focus',()=>{loadMembers(true);loadChangeRequests(true);});

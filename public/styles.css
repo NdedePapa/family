@@ -73,10 +73,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);d
 .canvas svg{width:100%;height:100%;display:block;touch-action:none}
 
 /* ─── Tree nodes ─────────────────────────────────────────── */
-.node-g{cursor:pointer;transition:transform .2s ease-out,opacity .3s ease-out}
-.node-g:hover{transform:scale(1.05)}
-.node-g:active{transform:scale(0.98)}
-.n-bg{transition:filter .15s,transform .2s ease-out}
+.node-g{cursor:pointer;transition:opacity .3s ease-out}
+.n-bg{transition:filter .15s}
 .node-g:hover .n-bg{filter:brightness(1.25)}
 .node-g.selected .n-bg{filter:brightness(1.35);animation:pulse-glow 2s ease-in-out infinite}
 .node-g.dim{opacity:.3}
