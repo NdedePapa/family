@@ -754,6 +754,7 @@ function performSearch(query) {
   const clearBtn = document.getElementById('searchClear');
   const resultsDiv = document.getElementById('searchResults');
   const resultsCount = document.getElementById('resultsCount');
+  const dropdown = document.getElementById('searchDropdown');
   
   // Clear state if empty query
   if (!q) {
@@ -762,6 +763,8 @@ function performSearch(query) {
     d3.selectAll('.node-g').classed('dim', false).classed('bright', false).classed('search-current', false);
     clearBtn.style.display = 'none';
     resultsDiv.style.display = 'none';
+    dropdown.style.display = 'none';
+    dropdown.innerHTML = '';
     return;
   }
   
@@ -783,12 +786,33 @@ function performSearch(query) {
     resultsDiv.style.display = 'none';
     d3.selectAll('.node-g').classed('dim', true).classed('bright', false).classed('search-current', false);
     searchInput.style.borderColor = '#e57373';
-    toast('No matches found', 'info');
+    
+    // Show empty dropdown
+    dropdown.style.display = 'block';
+    dropdown.innerHTML = '<div class="dropdown-empty">No matches found</div>';
   } else {
     // Results found
     searchInput.style.borderColor = '';
     resultsCount.textContent = `${searchResults.length} ${searchResults.length === 1 ? 'match' : 'matches'}`;
     resultsDiv.style.display = 'flex';
+    
+    // Populate dropdown with results
+    dropdown.style.display = 'block';
+    dropdown.innerHTML = matches.map((m, index) => {
+      const genderIcon = m.gender === 'Female' ? '♀' : m.gender === 'Male' ? '♂' : '●';
+      const town = m.town ? `📍 ${m.town}` : '';
+      const gen = m.gen !== undefined ? `Gen ${m.gen}` : '';
+      
+      return `
+        <div class="dropdown-item ${index === 0 ? 'active' : ''}" data-index="${index}" onclick="selectDropdownItem(${index})">
+          <div class="dropdown-name">${genderIcon} ${m.name}</div>
+          <div class="dropdown-meta">
+            ${town ? `<span>${town}</span>` : ''}
+            ${gen ? `<span>${gen}</span>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
     
     // Highlight all matches
     const matchIds = new Set(searchResults);
@@ -871,6 +895,27 @@ function updateNavigationButtons() {
   }
 }
 
+function selectDropdownItem(index) {
+  if (index < 0 || index >= searchResults.length) return;
+  
+  currentResultIndex = index;
+  
+  // Update dropdown active state
+  const dropdown = document.getElementById('searchDropdown');
+  const items = dropdown.querySelectorAll('.dropdown-item');
+  items.forEach((item, i) => {
+    item.classList.toggle('active', i === index);
+  });
+  
+  // Highlight and pan to result
+  highlightCurrentResult();
+  updateNavigationButtons();
+  
+  // Update counter
+  const resultsCount = document.getElementById('resultsCount');
+  resultsCount.textContent = `${currentResultIndex + 1} of ${searchResults.length}`;
+}
+
 function clearSearch() {
   const searchInput = document.getElementById('searchInput');
   searchInput.value = '';
@@ -881,6 +926,7 @@ function clearSearch() {
 // Initialize search on DOM load
 document.addEventListener('DOMContentLoaded', () => {
   const searchInput = document.getElementById('searchInput');
+  const dropdown = document.getElementById('searchDropdown');
   
   // Debounced search on input
   searchInput.addEventListener('input', function() {
@@ -892,12 +938,24 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Keyboard shortcuts
   searchInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
+    if (e.key === 'ArrowDown') {
       e.preventDefault();
-      if (e.shiftKey) {
-        navigateResults(-1); // Shift+Enter: previous
-      } else {
-        navigateResults(1); // Enter: next
+      if (searchResults.length > 0) {
+        const newIndex = (currentResultIndex + 1) % searchResults.length;
+        selectDropdownItem(newIndex);
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (searchResults.length > 0) {
+        const newIndex = currentResultIndex - 1 < 0 ? searchResults.length - 1 : currentResultIndex - 1;
+        selectDropdownItem(newIndex);
+      }
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (searchResults.length > 0) {
+        // Close dropdown and focus on selected result
+        dropdown.style.display = 'none';
+        highlightCurrentResult();
       }
     } else if (e.key === 'Escape') {
       e.preventDefault();
@@ -911,6 +969,20 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       searchInput.focus();
       searchInput.select();
+    }
+  });
+  
+  // Close dropdown when clicking outside
+  document.addEventListener('click', function(e) {
+    if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  });
+  
+  // Reopen dropdown when focusing search input with existing results
+  searchInput.addEventListener('focus', function() {
+    if (searchResults.length > 0 && this.value.trim()) {
+      dropdown.style.display = 'block';
     }
   });
 });
