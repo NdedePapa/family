@@ -37,6 +37,9 @@ const SEED=[{id:1,name:'Nana Aku',gender:'Female',gen:1,parentId:null,birth:'',d
 
 /* ─── API ───────────────────────────────────────────────── */
 async function api(url,opts={}){
+  if(opts.body&&typeof opts.body==='object'){
+    opts.body=JSON.stringify(opts.body);
+  }
   const r=await fetch(url,{headers:{'Content-Type':'application/json'},...opts});
   const d=await r.json();
   if(!r.ok)throw new Error(d.error||`Server error ${r.status}`);
@@ -282,15 +285,41 @@ function resetView(){renderTree();}
 /* ─── SIDEBAR ───────────────────────────────────────────── */
 function selectNode(id){
   selId=id;renderTree(true);renderSidebar(id);
+  
+  // Zoom in on selected node with smooth animation (like search)
+  setTimeout(()=>{
+    const selectedNode=document.querySelector('.node-g.selected');
+    if(selectedNode && svgSel && zoomObj){
+      const transform=selectedNode.getAttribute('transform');
+      const match=transform.match(/translate\(([^,]+),([^)]+)\)/);
+      if(match){
+        const x=parseFloat(match[1]);
+        const y=parseFloat(match[2]);
+        const cv=document.getElementById('canvas');
+        const W=cv.clientWidth;
+        const H=cv.clientHeight;
+        
+        // Zoom to 1.4x scale on mobile, 1.2x on desktop, and center on node
+        const targetScale=isMobile()?1.4:1.2;
+        const currentScale=currentTransform?currentTransform.k:1;
+        const newScale=Math.max(currentScale,targetScale);
+        
+        const newTransform=d3.zoomIdentity
+          .translate(W/2-x*newScale,H/2-y*newScale)
+          .scale(newScale);
+        
+        svgSel.transition()
+          .duration(500)
+          .ease(d3.easeCubicOut)
+          .call(zoomObj.transform,newTransform);
+      }
+    }
+  },50);
+  
   if(isMobile()){
     setTimeout(()=>document.getElementById('sbContent').scrollTop=0,60);
     // Gentle haptic feedback on mobile
     if(navigator.vibrate)navigator.vibrate(10);
-    // Smooth scroll to selected node in view (mobile only)
-    setTimeout(()=>{
-      const selectedNode=document.querySelector('.node-g.selected');
-      if(selectedNode)selectedNode.scrollIntoView({behavior:'smooth',block:'center',inline:'center'});
-    },100);
   }
 }
 
@@ -308,6 +337,11 @@ function renderSidebar(id){
       <div class="sb-badge" style="background:${gmv.color}18;color:${gmv.color};border:1px solid ${gmv.color}40">${gmv.short} · ${gmv.label}</div>
       <button class="sb-close" onclick="closeSidebar()" title="${t('close')}">✕</button>
     </div>
+    ${m.photoUrl?`
+    <div class="sb-photo" style="position:relative;margin-bottom:16px">
+      <img src="${m.photoUrl}" alt="${m.name}" style="width:100%;height:200px;object-fit:cover;border-radius:8px">
+      <button onclick="removePhoto(${m.id})" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);color:#fff;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all 0.2s" onmouseover="this.style.background='#c0392b'" onmouseout="this.style.background='rgba(0,0,0,0.7)'" title="Remove photo">✕</button>
+    </div>`:''}
     <div class="sb-name">${m.name}</div>
     <div class="sb-sub">${genderText}</div>
     <div class="info-grid">
@@ -332,6 +366,7 @@ function renderSidebar(id){
     <div class="sb-actions">
       <button class="btn btn-gold btn-sm" onclick="openAdd(${m.id})">＋ ${t('addChild')}</button>
       ${isAncestor||isRoot?`<button class="btn btn-purple btn-sm" onclick="openAddAncestor(${m.id})">▲ ${t('addParent')}</button>`:''}
+      <button class="btn btn-teal btn-sm" onclick="openPhotoUpload(${m.id})">📸 Add Photo</button>
       ${isAdminMode?`<button class="btn btn-ghost btn-sm" onclick="openEdit(${m.id})">✎ ${t('edit')}</button>`:''}
       ${isAdminMode?`<button class="btn btn-red btn-sm" onclick="deleteMember(${m.id})">✕ ${t('delete')}</button>`:''}
       ${!isAdminMode?`<button class="btn btn-blue btn-sm" onclick="requestChange(${m.id})">📝 ${t('requestChange')}</button>`:''}
@@ -562,7 +597,13 @@ function openAdd(pid){
   document.getElementById('genHint').textContent=t('genHintDefault');
   document.getElementById('saveBtn').textContent=`💾 ${t('saveMember')}`;
   document.getElementById('overlay').classList.add('show');
-  setTimeout(()=>document.getElementById('f-name').focus(),120);
+  setTimeout(()=>{
+    const nameInput=document.getElementById('f-name');
+    const byInput=document.getElementById('f-by');
+    nameInput.focus();
+    setupNameCapitalization(nameInput);
+    setupNameCapitalization(byInput);
+  },120);
 }
 
 function openAddAncestor(childId){
@@ -582,7 +623,13 @@ function openAddAncestor(childId){
   document.getElementById('genHint').textContent=t('genHintAncestor');
   document.getElementById('saveBtn').textContent=`💾 ${t('saveAncestor')}`;
   document.getElementById('overlay').classList.add('show');
-  setTimeout(()=>document.getElementById('f-name').focus(),120);
+  setTimeout(()=>{
+    const nameInput=document.getElementById('f-name');
+    const byInput=document.getElementById('f-by');
+    nameInput.focus();
+    setupNameCapitalization(nameInput);
+    setupNameCapitalization(byInput);
+  },120);
 }
 
 function openEdit(id){
@@ -603,9 +650,16 @@ function openEdit(id){
   document.getElementById('ctxAncestor').classList.toggle('show',m.gen<=0);
   populateParent(m.parentId);
   document.getElementById('f-parent').value=m.parentId||'';
-  document.getElementById('saveBtn').textContent=`💾 ${t('saveChanges')}`;
+  document.getElementById('saveBtn').textContent=` ${t('saveChanges')}`;
   document.getElementById('overlay').classList.add('show');
-  setTimeout(()=>document.getElementById('f-name').focus(),120);
+  setTimeout(()=>{
+    const nameInput=document.getElementById('f-name');
+    const byInput=document.getElementById('f-by');
+    nameInput.focus();
+    nameInput.select();
+    setupNameCapitalization(nameInput);
+    setupNameCapitalization(byInput);
+  },120);
 }
 
 function closeModal(){document.getElementById('overlay').classList.remove('show');editId=null;ancestorChildId=null;}
@@ -645,8 +699,8 @@ async function saveMember(){
     }
     setConn('ok',t('connOk',{count:members.length}));
     closeModal();updatePills();buildLegend();renderTree(true);renderSidebar(selId);
-  }catch(e){toast(`⚠ ${e.message}`,'err');shakeElement('saveBtn');}
-  finally{btn.textContent=editId?`💾 ${t('saveChanges')}`:`💾 ${t('saveMember')}`;btn.disabled=false;btn.style.opacity='1';}
+  }catch(e){toast(` ${e.message}`,'err');shakeElement('saveBtn');}
+  finally{btn.textContent=editId?` ${t('saveChanges')}`:` ${t('saveMember')}`;btn.disabled=false;btn.style.opacity='1';}
 }
 
 async function deleteMember(id){
@@ -663,7 +717,7 @@ async function deleteMember(id){
     closeSidebar();updatePills();buildLegend();renderTree(true);
     setConn('ok',t('connOk',{count:members.length}));
     toast(t('toastDeleted'),'info');
-  }catch(e){toast(`⚠ ${e.message}`,'err');}
+  }catch(e){toast(` ${e.message}`,'err');}
 }
 
 /* ─── HELP/EXPORT/IMPORT ────────────────────────────────── */
@@ -735,10 +789,10 @@ async function doImport(){
     if(e.message.includes('password')||e.message.includes('401')){
       toast(t('toastErrorImport'),'err');
     }else{
-      toast(`⚠ ${e.message}`,'err');
+      toast(` ${e.message}`,'err');
     }
   }finally{
-    btn.textContent=`⬆ ${t('importButton')}`;
+    btn.textContent=` ${t('importButton')}`;
     btn.disabled=false;
   }
 }
@@ -1049,6 +1103,486 @@ function pulseElement(id){
   setTimeout(()=>el.style.animation='',600);
 }
 
+/* ─── NAME CAPITALIZATION ────────────────────────────────── */
+function capitalizeWords(str){
+  return str.split(' ').map(word=>{
+    if(!word)return word;
+    // Handle special cases like "O'Brien", "McDonald"
+    if(word.includes("'")){
+      return word.split("'").map(part=>part.charAt(0).toUpperCase()+part.slice(1).toLowerCase()).join("'");
+    }
+    if(word.toLowerCase().startsWith('mc')){
+      return 'Mc'+word.charAt(2).toUpperCase()+word.slice(3).toLowerCase();
+    }
+    if(word.toLowerCase().startsWith('mac')){
+      return 'Mac'+word.charAt(3).toUpperCase()+word.slice(4).toLowerCase();
+    }
+    return word.charAt(0).toUpperCase()+word.slice(1).toLowerCase();
+  }).join(' ');
+}
+
+function setupNameCapitalization(input){
+  if(!input)return;
+  
+  // Remove existing listener if any
+  input.removeEventListener('blur',handleNameCapitalization);
+  
+  // Capitalize on blur (when user leaves the field)
+  input.addEventListener('blur',handleNameCapitalization);
+  
+  // Also capitalize on Enter key
+  input.removeEventListener('keydown',handleNameEnter);
+  input.addEventListener('keydown',handleNameEnter);
+}
+
+function handleNameCapitalization(e){
+  const input=e.target;
+  const value=input.value.trim();
+  if(value){
+    input.value=capitalizeWords(value);
+  }
+}
+
+function handleNameEnter(e){
+  if(e.key==='Enter'){
+    const input=e.target;
+    const value=input.value.trim();
+    if(value){
+      input.value=capitalizeWords(value);
+    }
+  }
+}
+
+/* ─── STATISTICS DASHBOARD ──────────────────────────────── */
+async function openStatistics(){
+  const overlay=document.getElementById('statsOverlay');
+  const content=document.getElementById('statsContent');
+  
+  content.innerHTML=`
+    <h2 style="margin:0 0 24px 0">📊 Family Statistics</h2>
+    <div style="text-align:center;padding:40px;color:var(--ink3)">
+      <div class="spinner"></div>
+      <p style="margin-top:16px">Loading statistics...</p>
+    </div>
+  `;
+  overlay.classList.add('active');
+  
+  try{
+    const stats=await api('/api/statistics');
+    
+    content.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+        <h2 style="margin:0">📊 Family Statistics</h2>
+        <button class="btn btn-ghost" onclick="closeStats()">✕</button>
+      </div>
+      
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;margin-bottom:24px">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:32px;font-weight:700;color:var(--gold)">${stats.total_members||0}</div>
+          <div style="font-size:12px;color:var(--ink3);margin-top:4px">Total Members</div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:32px;font-weight:700;color:#27ae60">${stats.living_members||0}</div>
+          <div style="font-size:12px;color:var(--ink3);margin-top:4px">Living</div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:32px;font-weight:700;color:var(--purple)">${stats.female_count||0}</div>
+          <div style="font-size:12px;color:var(--ink3);margin-top:4px">Female</div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:32px;font-weight:700;color:var(--blue)">${stats.male_count||0}</div>
+          <div style="font-size:12px;color:var(--ink3);margin-top:4px">Male</div>
+        </div>
+      </div>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px">
+          <h4 style="margin:0 0 12px 0;font-size:14px;color:var(--ink2)">Generations</h4>
+          <div style="font-size:11px;color:var(--ink3)">
+            <div style="margin:8px 0"><strong>Total:</strong> ${(stats.max_generation||1)-(stats.min_generation||0)+1}</div>
+            <div style="margin:8px 0"><strong>Range:</strong> Gen ${stats.min_generation||0} to ${stats.max_generation||1}</div>
+          </div>
+        </div>
+        
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px">
+          <h4 style="margin:0 0 12px 0;font-size:14px;color:var(--ink2)">Locations</h4>
+          <div style="font-size:11px;color:var(--ink3)">
+            <div style="margin:8px 0"><strong>Unique Hometowns:</strong> ${stats.unique_hometowns||0}</div>
+            ${stats.topHometowns&&stats.topHometowns.length>0?`<div style="margin-top:12px;max-height:100px;overflow-y:auto">
+              ${stats.topHometowns.slice(0,5).map(h=>`<div style="margin:4px 0">${h.hometown} (${h.count})</div>`).join('')}
+            </div>`:''}
+          </div>
+        </div>
+      </div>
+      
+      ${stats.averageLifespan?`<div style="margin-top:20px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center">
+        <div style="font-size:11px;color:var(--ink3);margin-bottom:8px">Average Lifespan (Deceased)</div>
+        <div style="font-size:28px;font-weight:700;color:var(--green)">${Math.round(stats.averageLifespan)} years</div>
+      </div>`:''}
+      
+      <div class="modal-foot" style="margin-top:24px">
+        <button class="btn btn-ghost" onclick="closeStats()">Close</button>
+      </div>
+    `;
+  }catch(e){
+    content.innerHTML=`
+      <h2>📊 Family Statistics</h2>
+      <div style="padding:40px;text-align:center;color:var(--red)">
+        <p>❌ Failed to load statistics</p>
+        <p style="font-size:12px;color:var(--ink3)">${e.message}</p>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeStats()">Close</button>
+      </div>
+    `;
+  }
+}
+
+function closeStats(){
+  document.getElementById('statsOverlay').classList.remove('active');
+}
+
+/* ─── TIMELINE VIEW ─────────────────────────────────────── */
+async function openTimeline(){
+  const overlay=document.getElementById('timelineOverlay');
+  const content=document.getElementById('timelineContent');
+  
+  content.innerHTML=`
+    <h2 style="margin:0 0 24px 0">📅 Family Timeline</h2>
+    <div style="text-align:center;padding:40px;color:var(--ink3)">
+      <div class="spinner"></div>
+      <p style="margin-top:16px">Loading timeline...</p>
+    </div>
+  `;
+  overlay.classList.add('active');
+  
+  try{
+    const events=await api('/api/timeline');
+    
+    if(!events||events.length===0){
+      content.innerHTML=`
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+          <h2 style="margin:0">📅 Family Timeline</h2>
+          <button class="btn btn-ghost" onclick="closeTimeline()">✕</button>
+        </div>
+        <div style="padding:40px;text-align:center;color:var(--ink3)">
+          <p>No timeline events found</p>
+          <p style="font-size:12px">Add birth and death years to members to see them here</p>
+        </div>
+        <div class="modal-foot">
+          <button class="btn btn-ghost" onclick="closeTimeline()">Close</button>
+        </div>
+      `;
+      return;
+    }
+    
+    content.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+        <h2 style="margin:0">📅 Family Timeline</h2>
+        <button class="btn btn-ghost" onclick="closeTimeline()">✕</button>
+      </div>
+      
+      <div style="max-height:500px;overflow-y:auto;padding-right:8px">
+        ${events.map(evt=>{
+          const icon=evt.event_type==='birth'?'🎂':evt.event_type==='death'?'🕊️':'📌';
+          const color=evt.event_type==='birth'?'var(--green)':evt.event_type==='death'?'var(--ink3)':'var(--blue)';
+          return`
+            <div style="display:flex;gap:16px;margin-bottom:16px;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all 0.2s" 
+                 onclick="selectNode(${evt.id});closeTimeline()"
+                 onmouseover="this.style.borderColor='${color}'"
+                 onmouseout="this.style.borderColor='var(--border)'">
+              <div style="flex-shrink:0;width:60px;text-align:center;padding-top:4px">
+                <div style="font-size:18px;font-weight:700;color:${color}">${evt.year||'?'}</div>
+                <div style="font-size:20px;margin-top:4px">${icon}</div>
+              </div>
+              <div style="flex:1">
+                <div style="font-weight:600;color:var(--ink);margin-bottom:4px">${evt.title||evt.name}</div>
+                ${evt.name?`<div style="font-size:12px;color:var(--ink3)">${evt.name}</div>`:''}
+                ${evt.location?`<div style="font-size:11px;color:var(--ink3);margin-top:4px">📍 ${evt.location}</div>`:''}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      
+      <div class="modal-foot" style="margin-top:20px">
+        <button class="btn btn-ghost" onclick="closeTimeline()">Close</button>
+      </div>
+    `;
+  }catch(e){
+    content.innerHTML=`
+      <h2>📅 Family Timeline</h2>
+      <div style="padding:40px;text-align:center;color:var(--red)">
+        <p>❌ Failed to load timeline</p>
+        <p style="font-size:12px;color:var(--ink3)">${e.message}</p>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeTimeline()">Close</button>
+      </div>
+    `;
+  }
+}
+
+function closeTimeline(){
+  document.getElementById('timelineOverlay').classList.remove('active');
+}
+
+/* ─── PRINT DIALOG ──────────────────────────────────────── */
+function openPrintDialog(){
+  const overlay=document.getElementById('printOverlay');
+  const content=document.getElementById('printContent');
+  
+  content.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+      <h2 style="margin:0">🖨️ Print Family Tree</h2>
+      <button class="btn btn-ghost" onclick="closePrint()">✕</button>
+    </div>
+    
+    <div style="margin-bottom:20px">
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px;color:var(--ink2)">
+        Orientation
+      </label>
+      <select id="printOrientation" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--ink);font-size:13px">
+        <option value="landscape">Landscape (recommended)</option>
+        <option value="portrait">Portrait</option>
+      </select>
+    </div>
+    
+    <div style="margin-bottom:20px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="printCompact" style="width:16px;height:16px">
+        <span style="font-size:13px;color:var(--ink2)">Compact view (smaller nodes)</span>
+      </label>
+    </div>
+    
+    <div style="padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:20px">
+      <p style="margin:0;font-size:11px;color:var(--ink3);line-height:1.6">
+        💡 <strong>Tip:</strong> For best results, set your printer to landscape orientation 
+        and adjust margins to minimum. You can also save as PDF from the print dialog.
+      </p>
+    </div>
+    
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closePrint()">Cancel</button>
+      <button class="btn btn-blue" onclick="printTree()">🖨️ Print</button>
+    </div>
+  `;
+  
+  overlay.classList.add('active');
+}
+
+function closePrint(){
+  document.getElementById('printOverlay').classList.remove('active');
+}
+
+function printTree(){
+  const orientation=document.getElementById('printOrientation').value;
+  const compact=document.getElementById('printCompact').checked;
+  
+  closePrint();
+  
+  document.body.classList.add('printing');
+  if(compact)document.body.classList.add('print-compact');
+  
+  const style=document.createElement('style');
+  style.id='printStyle';
+  style.textContent=`
+    @media print {
+      @page { size: ${orientation}; margin: 0.5cm; }
+      body { background: white !important; }
+      .hdr, .sidebar, .hint-bar, .legend, .ctrl-cluster { display: none !important; }
+      .canvas { height: auto !important; }
+      svg { width: 100% !important; height: auto !important; }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  setTimeout(()=>{
+    window.print();
+    setTimeout(()=>{
+      document.body.classList.remove('printing','print-compact');
+      const s=document.getElementById('printStyle');
+      if(s)s.remove();
+    },500);
+  },300);
+}
+
+/* ─── PHOTO UPLOAD ─────────────────────────────────────────*/
+let currentPhotoMemberId=null;
+
+function openPhotoUpload(memberId){
+  currentPhotoMemberId=memberId;
+  const member=members.find(m=>m.id===memberId);
+  const overlay=document.getElementById('photoOverlay');
+  const content=document.getElementById('photoContent');
+  
+  content.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+      <h2 style="margin:0">📸 Upload Photo for ${member?.name||'Member'}</h2>
+      <button class="btn btn-ghost" onclick="closePhotoUpload()">✕</button>
+    </div>
+    
+    <div style="margin-bottom:20px">
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px;color:var(--ink2)">
+        Select Photo
+      </label>
+      <input type="file" id="photoFileInput" accept="image/*" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--ink);font-size:13px">
+      <div id="photoPreview" style="margin-top:12px;display:none">
+        <img id="photoPreviewImg" style="width:100%;max-height:300px;object-fit:contain;border-radius:8px;border:1px solid var(--border)">
+      </div>
+    </div>
+    
+    <div style="margin-bottom:20px">
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px;color:var(--ink2)">
+        Caption (optional)
+      </label>
+      <input type="text" id="photoCaption" placeholder="E.g., At graduation, Family reunion..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--ink);font-size:13px">
+    </div>
+    
+    <div style="margin-bottom:20px">
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px;color:var(--ink2)">
+        Year (optional)
+      </label>
+      <input type="text" id="photoYear" placeholder="E.g., 1998, 2020" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--ink);font-size:13px">
+    </div>
+    
+    <div style="margin-bottom:20px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="photoIsProfile" checked style="width:16px;height:16px">
+        <span style="font-size:13px;color:var(--ink2)">Set as profile photo (displays in sidebar and on tree)</span>
+      </label>
+    </div>
+    
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closePhotoUpload()">Cancel</button>
+      <button class="btn btn-teal" onclick="uploadPhoto()" id="uploadPhotoBtn">📸 Upload Photo</button>
+    </div>
+  `;
+  
+  overlay.classList.add('active');
+  
+  setTimeout(()=>{
+    const fileInput=document.getElementById('photoFileInput');
+    fileInput.addEventListener('change',(e)=>{
+      const file=e.target.files[0];
+      if(file){
+        const reader=new FileReader();
+        reader.onload=(e)=>{
+          document.getElementById('photoPreview').style.display='block';
+          document.getElementById('photoPreviewImg').src=e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  },100);
+}
+
+function closePhotoUpload(){
+  document.getElementById('photoOverlay').classList.remove('active');
+  currentPhotoMemberId=null;
+}
+
+async function uploadPhoto(){
+  const fileInput=document.getElementById('photoFileInput');
+  const caption=document.getElementById('photoCaption').value.trim();
+  const year=document.getElementById('photoYear').value.trim();
+  const isProfile=document.getElementById('photoIsProfile').checked;
+  const btn=document.getElementById('uploadPhotoBtn');
+  
+  if(!fileInput.files||!fileInput.files[0]){
+    toast('Please select a photo','err');
+    return;
+  }
+  
+  const file=fileInput.files[0];
+  if(file.size>5*1024*1024){
+    toast('Photo must be less than 5MB','err');
+    return;
+  }
+  
+  btn.disabled=true;
+  btn.textContent='Uploading...';
+  
+  try{
+    const formData=new FormData();
+    formData.append('photo',file);
+    formData.append('memberId',currentPhotoMemberId);
+    formData.append('caption',caption);
+    formData.append('year',year);
+    formData.append('isProfile',isProfile);
+    formData.append('uploadedBy','User');
+    
+    const response=await fetch('/api/photos/upload',{
+      method:'POST',
+      body:formData
+    });
+    
+    if(!response.ok){
+      const error=await response.json();
+      throw new Error(error.error||'Upload failed');
+    }
+    
+    const result=await response.json();
+    
+    if(isProfile){
+      const member=members.find(m=>m.id===currentPhotoMemberId);
+      if(member){
+        member.photoUrl=result.filePath;
+      }
+    }
+    
+    toast('✅ Photo uploaded successfully!','success');
+    closePhotoUpload();
+    renderSidebar(currentPhotoMemberId);
+    renderTree(true);
+    
+  }catch(e){
+    toast(`❌ ${e.message}`,'err');
+  }finally{
+    btn.disabled=false;
+    btn.textContent='📸 Upload Photo';
+  }
+}
+
+async function removePhoto(memberId){
+  const member=members.find(m=>m.id===memberId);
+  if(!member||!member.photoUrl){
+    toast('No photo to remove','err');
+    return;
+  }
+  
+  const ok=await confirm2('Remove Photo',`Remove profile photo for ${member.name}?`);
+  if(!ok)return;
+  
+  try{
+    const updatedMember={
+      name:member.name,
+      gender:member.gender,
+      gen:member.gen,
+      parentId:member.parentId,
+      birth:member.birth,
+      death:member.death,
+      town:member.town,
+      notes:member.notes,
+      by:member.by,
+      photoUrl:null
+    };
+    
+    await api(`/api/members/${memberId}`,{
+      method:'PUT',
+      body:updatedMember
+    });
+    
+    member.photoUrl=null;
+    toast('✅ Photo removed','success');
+    renderSidebar(memberId);
+    renderTree(true);
+    
+  }catch(e){
+    toast(`❌ ${e.message}`,'err');
+  }
+}
+
 /* ─── CHANGE REQUESTS ───────────────────────────────────── */
 async function loadChangeRequests(silent=false){
   try{
@@ -1306,7 +1840,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   });
 
   document.addEventListener('keydown',e=>{
-    if(e.key==='Escape'){closeModal();closeEx();closeHelp();closeSidebar();closeRequests();closeImport();}
+    if(e.key==='Escape'){closeModal();closeEx();closeHelp();closeSidebar();closeRequests();closeImport();closeStats();closeTimeline();closePrint();closePhotoUpload();}
     if((e.key==='f'||e.key==='F')&&(e.ctrlKey||e.metaKey)){e.preventDefault();document.getElementById('searchInput').focus();}
     if(e.key==='?'){openHelp();}
   });

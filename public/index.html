@@ -48,6 +48,9 @@
       <span id="requestsText">📋 Requests</span>
       <span id="requestsBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#c0392b;color:#fff;border-radius:10px;padding:2px 6px;font-size:9px;font-weight:700"></span>
     </button>
+    <button class="btn btn-teal btn-sm" onclick="openStatistics()" title="View family statistics">📊 Stats</button>
+    <button class="btn btn-orange btn-sm" onclick="openTimeline()" title="View family timeline">📅 Timeline</button>
+    <button class="btn btn-ghost btn-icon" onclick="openPrintDialog()" title="Print tree">🖨️</button>
     <button class="btn btn-ghost btn-icon" onclick="toggleMatrilineal()" id="matriBtn" title="Show matrilineal lineage only">♀</button>
     <button class="btn btn-ghost btn-icon" onclick="resetView()" id="fitBtn" title="Fit tree to screen">⊙</button>
     <button class="btn btn-gold" onclick="openAdd(null)" id="addBtn" title="Add new member">＋ <span id="addText">Add Member</span></button>
@@ -122,6 +125,38 @@
       <button class="btn btn-ghost" onclick="cfResolve(false)">No, cancel</button>
       <button class="btn btn-red" onclick="cfResolve(true)">Yes, confirm</button>
     </div>
+  </div>
+</div>
+
+<!-- Statistics Modal -->
+<div class="overlay" id="statsOverlay">
+  <div class="modal" style="max-width:800px">
+    <div class="modal-stripe" style="background:linear-gradient(90deg,transparent,#16a085,transparent)"></div>
+    <div id="statsContent"></div>
+  </div>
+</div>
+
+<!-- Timeline Modal -->
+<div class="overlay" id="timelineOverlay">
+  <div class="modal" style="max-width:900px">
+    <div class="modal-stripe" style="background:linear-gradient(90deg,transparent,#e67e22,transparent)"></div>
+    <div id="timelineContent"></div>
+  </div>
+</div>
+
+<!-- Print Dialog -->
+<div class="overlay" id="printOverlay">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-stripe" style="background:linear-gradient(90deg,transparent,#7f8c8d,transparent)"></div>
+    <div id="printContent"></div>
+  </div>
+</div>
+
+<!-- Photo Upload Modal -->
+<div class="overlay" id="photoOverlay">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-stripe" style="background:linear-gradient(90deg,transparent,#16a085,transparent)"></div>
+    <div id="photoContent"></div>
   </div>
 </div>
 

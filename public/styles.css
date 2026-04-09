@@ -83,6 +83,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);d
 .btn-red{background:#c0392b22;color:#e57373;border:1px solid #c0392b44}.btn-red:hover{background:#c0392b40}
 .btn-blue{background:#2e9fb522;color:#74d7f0;border:1px solid #2e9fb544}.btn-blue:hover{background:#2e9fb540}
 .btn-purple{background:#7c5bb522;color:#c4b5fd;border:1px solid #7c5bb544}.btn-purple:hover{background:#7c5bb540}
+.btn-teal{background:#16a08522;color:#66d9c7;border:1px solid #16a08544}.btn-teal:hover{background:#16a08540}
+.btn-orange{background:#e67e2222;color:#f39c5c;border:1px solid #e67e2244}.btn-orange:hover{background:#e67e2240}
 .btn-sm{padding:5px 10px;font-size:11px;min-height:30px}
 .btn-icon{padding:7px 10px;font-size:15px;min-width:34px}
 .btn-help{background:var(--card);border:1px solid var(--border);border-radius:50%;width:32px;height:32px;font-size:14px;color:var(--gold);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .3s ease-out;flex-shrink:0;font-family:'DM Sans',sans-serif;font-weight:700}
@@ -166,6 +168,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);d
 
 /* ─── Overlays ──────────────────────────────────────────── */
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(5px);z-index:100;align-items:center;justify-content:center;padding:16px;opacity:0;transition:opacity .3s ease-out}
+.overlay.active{display:flex;animation:fadeIn .3s ease-out forwards}
 .overlay.show{display:flex;animation:fadeIn .3s ease-out forwards}
 
 /* ─── Base modal ────────────────────────────────────────── */

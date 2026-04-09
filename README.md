@@ -1,6 +1,8 @@
-# 🌳 My Family Tree
+# 🌳 My Family Tree - Enhanced Edition
 
-A collaborative family tree web app — anyone with the link can add members.
+A beautiful, interactive family tree application with photo uploads, statistics, and timeline features.
+
+**Tech Stack:** Node.js · Express · MySQL · D3.js · Multermembers.
 Built with Node.js + Express + MySQL.
 
 ---
