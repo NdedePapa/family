@@ -2,7 +2,7 @@
   "name": "my-family-tree",
   "version": "1.0.0",
   "description": "My Family Tree — collaborative web app with MySQL",
-  "main": "server.js",
+  "main": "server-enhanced.js",
   "scripts": {
     "start": "node server-enhanced.js",
     "dev": "nodemon server-enhanced.js",

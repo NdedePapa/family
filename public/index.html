@@ -38,23 +38,49 @@
     <span id="connText">Connecting…</span>
   </div>
   <div class="hdr-right">
-    <button class="btn-help" onclick="toggleLanguage()" title="Switch language" id="langBtn">🌐</button>
-    <button class="btn-help" onclick="toggleAdminMode()" id="adminBtn">🔒</button>
-    <button class="btn-help" onclick="toggleTheme()" id="themeBtn">☀</button>
-    <button class="btn-help" onclick="openHelp()">?</button>
-    <button class="btn btn-green btn-sm" onclick="openExport()" id="backupBtn" title="Backup data">📤 <span id="backupText">Backup</span></button>
-    <button class="btn btn-purple btn-sm" onclick="openImport()" id="importBtn" title="Import data">📥 <span id="importText">Import</span></button>
-    <button class="btn btn-blue btn-sm" onclick="openChangeRequests()" id="requestsBtn" style="position:relative" title="View change requests">
-      <span id="requestsText">📋 Requests</span>
-      <span id="requestsBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#c0392b;color:#fff;border-radius:10px;padding:2px 6px;font-size:9px;font-weight:700"></span>
-    </button>
-    <button class="btn btn-teal btn-sm" onclick="openStatistics()" title="View family statistics">📊 Stats</button>
-    <button class="btn btn-orange btn-sm" onclick="openTimeline()" title="View family timeline">📅 Timeline</button>
-    <button class="btn btn-ghost btn-icon" onclick="openPrintDialog()" title="Print tree">🖨️</button>
-    <button class="btn btn-ghost btn-icon" onclick="toggleMatrilineal()" id="matriBtn" title="Show matrilineal lineage only">♀</button>
+    <!-- Always visible buttons -->
+    <button class="btn btn-gold btn-sm" onclick="openAdd(null)" id="addBtn" title="Add new member">＋ <span id="addText" class="hide-mobile">Add</span></button>
+    <button class="btn btn-teal btn-sm hide-mobile" onclick="openStatistics()" title="View family statistics">� <span class="hide-tablet">Stats</span></button>
     <button class="btn btn-ghost btn-icon" onclick="resetView()" id="fitBtn" title="Fit tree to screen">⊙</button>
-    <button class="btn btn-gold" onclick="openAdd(null)" id="addBtn" title="Add new member">＋ <span id="addText">Add Member</span></button>
+    
+    <!-- Mobile menu button -->
+    <button class="btn btn-ghost btn-icon mobile-menu-btn" onclick="toggleMobileMenu()" title="Menu">☰</button>
+    
+    <!-- Desktop buttons (hidden on mobile) -->
+    <div class="desktop-buttons">
+      <button class="btn btn-orange btn-sm" onclick="openTimeline()" title="View family timeline">� <span class="hide-tablet">Timeline</span></button>
+      <button class="btn btn-blue btn-sm" onclick="openChangeRequests()" id="requestsBtn" style="position:relative" title="View change requests">
+        <span id="requestsText" class="hide-tablet">📋 Requests</span>
+        <span id="requestsBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#c0392b;color:#fff;border-radius:10px;padding:2px 6px;font-size:9px;font-weight:700"></span>
+      </button>
+      <button class="btn btn-green btn-sm" onclick="openExport()" id="backupBtn" title="Backup data">📤 <span id="backupText" class="hide-tablet">Backup</span></button>
+      <button class="btn btn-purple btn-sm" onclick="openImport()" id="importBtn" title="Import data">📥 <span id="importText" class="hide-tablet">Import</span></button>
+      <button class="btn-help" onclick="toggleLanguage()" title="Switch language" id="langBtn">🌐</button>
+      <button class="btn-help" onclick="toggleAdminMode()" id="adminBtn">�</button>
+      <button class="btn-help" onclick="toggleTheme()" id="themeBtn">☀</button>
+      <button class="btn btn-ghost btn-icon" onclick="openPrintDialog()" title="Print tree">🖨️</button>
+      <button class="btn btn-ghost btn-icon" onclick="toggleMatrilineal()" id="matriBtn" title="Show matrilineal lineage only">♀</button>
+      <button class="btn-help" onclick="openHelp()">?</button>
+    </div>
+    
     <div class="pills" id="pills"></div>
+  </div>
+  
+  <!-- Mobile dropdown menu -->
+  <div class="mobile-menu" id="mobileMenu">
+    <button onclick="openTimeline();toggleMobileMenu()">📅 Timeline</button>
+    <button onclick="openChangeRequests();toggleMobileMenu()" style="position:relative">
+      📋 Requests
+      <span id="requestsBadgeMobile" style="display:none;position:absolute;top:8px;right:8px;background:#c0392b;color:#fff;border-radius:10px;padding:2px 6px;font-size:9px;font-weight:700"></span>
+    </button>
+    <button onclick="openExport();toggleMobileMenu()">📤 Backup</button>
+    <button onclick="openImport();toggleMobileMenu()">📥 Import</button>
+    <button onclick="openPrintDialog();toggleMobileMenu()">🖨️ Print</button>
+    <button onclick="toggleMatrilineal();toggleMobileMenu()">♀ Matrilineal</button>
+    <button onclick="toggleLanguage();toggleMobileMenu()">🌐 Language</button>
+    <button onclick="toggleTheme();toggleMobileMenu()">☀ Theme</button>
+    <button onclick="toggleAdminMode();toggleMobileMenu()">🔒 Admin</button>
+    <button onclick="openHelp();toggleMobileMenu()">? Help</button>
   </div>
 </div>
 

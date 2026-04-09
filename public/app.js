@@ -1594,13 +1594,20 @@ async function loadChangeRequests(silent=false){
 function updateRequestsBadge(){
   const pending=changeRequests.filter(r=>r.status==='pending').length;
   const badge=document.getElementById('requestsBadge');
+  const badgeMobile=document.getElementById('requestsBadgeMobile');
   const btn=document.getElementById('requestsBtn');
   if(pending>0){
     badge.textContent=pending;
     badge.style.display='block';
-    btn.title=`${pending} ${t('pendingRequests',{count:pending})}`;
+    if(badgeMobile){
+      badgeMobile.textContent=pending;
+      badgeMobile.style.display='block';
+    }
+    btn.classList.add('has-badge');
   }else{
     badge.style.display='none';
+    if(badgeMobile)badgeMobile.style.display='none';
+    btn.classList.remove('has-badge');
   }
 }
 
@@ -1795,6 +1802,12 @@ function loadTheme(){
       document.getElementById('themeBtn').textContent='🌙';
     }
   }catch(e){}
+}
+
+/* ─── MOBILE MENU ──────────────────────────────────────────*/
+function toggleMobileMenu(){
+  const menu=document.getElementById('mobileMenu');
+  menu.classList.toggle('active');
 }
 
 /* ─── MATRILINEAL FILTER ────────────────────────────────── */
