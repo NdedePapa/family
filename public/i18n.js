@@ -290,7 +290,7 @@ const translations = {
     namePlaceholder: 'par ex. Kofi Mensah  ou  Abena Nyarko',
     nameHint: 'Écrivez le nom tel que la famille le connaît. Vous pouvez inclure des surnoms entre parenthèses, par ex. "Victoria Tandoh (Sister Mother)"',
     gender: 'Genre',
-    notSpecified: 'Non spécifié',
+    notSpecified: 'Sélectionner le genre',
     generation: 'Génération',
     genWhere: '— où dans l\'arbre ?',
     genHintDefault: 'Lors de l\'ajout d\'un enfant, la génération est définie automatiquement — vous n\'avez généralement pas besoin de la modifier.',
