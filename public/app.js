@@ -309,10 +309,10 @@ function renderTree(preserveZoom=false){
     if(m.photoUrl){
       // With photo: shift everything right, use left-aligned text
       const textStartX=-NW/2+58;
-      g.append('text').attr('x',textStartX).attr('y',-18).attr('fill',gmv.color).attr('font-size',genderSize).attr('font-family','DM Sans,sans-serif').attr('dominant-baseline','middle').text(gg);
-      g.append('text').attr('x',textStartX+20).attr('y',-18).attr('text-anchor','start').attr('dominant-baseline','middle').attr('font-family','Playfair Display,serif').attr('font-size',nameSize).attr('font-weight',700).attr('fill','#f5ead5').text(m.name.length>14?m.name.slice(0,13)+'…':m.name);
-      g.append('text').attr('x',textStartX+20).attr('y',0).attr('text-anchor','start').attr('dominant-baseline','middle').attr('font-family','DM Mono,monospace').attr('font-size',labelSize).attr('fill',gmv.color).attr('fill-opacity',.85).text(gmv.label);
-      if(m.birth)g.append('text').attr('x',textStartX+20).attr('y',16).attr('text-anchor','start').attr('dominant-baseline','middle').attr('font-family','DM Mono,monospace').attr('font-size',labelSize).attr('fill','#7a6e5f').text(`${m.birth} – ${m.death||t('present')}`);
+      g.append('text').attr('x',textStartX).attr('y',-12).attr('fill',gmv.color).attr('font-size',genderSize).attr('font-family','DM Sans,sans-serif').attr('dominant-baseline','middle').text(gg);
+      g.append('text').attr('x',textStartX+20).attr('y',-12).attr('text-anchor','start').attr('dominant-baseline','middle').attr('font-family','Playfair Display,serif').attr('font-size',nameSize).attr('font-weight',700).attr('fill','#f5ead5').text(m.name.length>14?m.name.slice(0,13)+'…':m.name);
+      g.append('text').attr('x',textStartX+20).attr('y',6).attr('text-anchor','start').attr('dominant-baseline','middle').attr('font-family','DM Mono,monospace').attr('font-size',labelSize).attr('fill',gmv.color).attr('fill-opacity',.85).text(gmv.label);
+      if(m.birth)g.append('text').attr('x',textStartX+20).attr('y',20).attr('text-anchor','start').attr('dominant-baseline','middle').attr('font-family','DM Mono,monospace').attr('font-size',labelSize).attr('fill','#7a6e5f').text(`${m.birth} – ${m.death||t('present')}`);
     }else{
       // Without photo: centered text as before
       g.append('text').attr('x',-NW/2+13).attr('y',-7).attr('fill',gmv.color).attr('font-size',genderSize).attr('font-family','DM Sans,sans-serif').attr('dominant-baseline','middle').text(gg);
