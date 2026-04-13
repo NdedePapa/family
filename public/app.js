@@ -304,13 +304,22 @@ function renderTree(preserveZoom=false){
     }
     
     const gg=m.gender==='Female'?'♀':m.gender==='Male'?'♂':'·';
-    const textStartX=m.photoUrl?-NW/2+58:-NW/2+13;
-    g.append('text').attr('x',textStartX).attr('y',-7).attr('fill',gmv.color).attr('font-size',genderSize).attr('font-family','DM Sans,sans-serif').attr('dominant-baseline','middle').text(gg);
     
-    const nameX=m.photoUrl?10:5;
-    g.append('text').attr('x',nameX).attr('y',-10).attr('text-anchor','middle').attr('dominant-baseline','middle').attr('font-family','Playfair Display,serif').attr('font-size',nameSize).attr('font-weight',700).attr('fill','#f5ead5').text(m.name.length>17?m.name.slice(0,16)+'…':m.name);
-    g.append('text').attr('x',nameX).attr('y',9).attr('text-anchor','middle').attr('dominant-baseline','middle').attr('font-family','DM Mono,monospace').attr('font-size',labelSize).attr('fill',gmv.color).attr('fill-opacity',.85).text(gmv.label);
-    if(m.birth)g.append('text').attr('x',nameX).attr('y',25).attr('text-anchor','middle').attr('dominant-baseline','middle').attr('font-family','DM Mono,monospace').attr('font-size',labelSize).attr('fill','#7a6e5f').text(`${m.birth} – ${m.death||t('present')}`);
+    // Adjust text positioning based on photo presence
+    if(m.photoUrl){
+      // With photo: shift everything right, use left-aligned text
+      const textStartX=-NW/2+58;
+      g.append('text').attr('x',textStartX).attr('y',-18).attr('fill',gmv.color).attr('font-size',genderSize).attr('font-family','DM Sans,sans-serif').attr('dominant-baseline','middle').text(gg);
+      g.append('text').attr('x',textStartX+20).attr('y',-18).attr('text-anchor','start').attr('dominant-baseline','middle').attr('font-family','Playfair Display,serif').attr('font-size',nameSize).attr('font-weight',700).attr('fill','#f5ead5').text(m.name.length>14?m.name.slice(0,13)+'…':m.name);
+      g.append('text').attr('x',textStartX+20).attr('y',0).attr('text-anchor','start').attr('dominant-baseline','middle').attr('font-family','DM Mono,monospace').attr('font-size',labelSize).attr('fill',gmv.color).attr('fill-opacity',.85).text(gmv.label);
+      if(m.birth)g.append('text').attr('x',textStartX+20).attr('y',16).attr('text-anchor','start').attr('dominant-baseline','middle').attr('font-family','DM Mono,monospace').attr('font-size',labelSize).attr('fill','#7a6e5f').text(`${m.birth} – ${m.death||t('present')}`);
+    }else{
+      // Without photo: centered text as before
+      g.append('text').attr('x',-NW/2+13).attr('y',-7).attr('fill',gmv.color).attr('font-size',genderSize).attr('font-family','DM Sans,sans-serif').attr('dominant-baseline','middle').text(gg);
+      g.append('text').attr('x',5).attr('y',-10).attr('text-anchor','middle').attr('dominant-baseline','middle').attr('font-family','Playfair Display,serif').attr('font-size',nameSize).attr('font-weight',700).attr('fill','#f5ead5').text(m.name.length>17?m.name.slice(0,16)+'…':m.name);
+      g.append('text').attr('x',5).attr('y',9).attr('text-anchor','middle').attr('dominant-baseline','middle').attr('font-family','DM Mono,monospace').attr('font-size',labelSize).attr('fill',gmv.color).attr('fill-opacity',.85).text(gmv.label);
+      if(m.birth)g.append('text').attr('x',5).attr('y',25).attr('text-anchor','middle').attr('dominant-baseline','middle').attr('font-family','DM Mono,monospace').attr('font-size',labelSize).attr('fill','#7a6e5f').text(`${m.birth} – ${m.death||t('present')}`);
+    }
     
     const kc=d.children?d.children.length:0;
     if(kc>0){
