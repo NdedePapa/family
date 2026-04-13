@@ -199,6 +199,33 @@ function renderTree(preserveZoom=false){
       by: '',
       isVirtual: true
     });
+  } else {
+    // Normal mode: Check for multiple roots and create virtual root if needed
+    const rootMembers = members.filter(m => !m.parentId || !members.find(p => p.id === m.parentId));
+    
+    if(rootMembers.length > 1){
+      // Multiple roots detected - create virtual root
+      filteredMembers = members.map(m => {
+        if(!m.parentId || !members.find(p => p.id === m.parentId)){
+          return {...m, parentId: 'virtual_root'};
+        }
+        return m;
+      });
+      
+      filteredMembers.unshift({
+        id: 'virtual_root',
+        name: 'Family Tree',
+        gender: '',
+        gen: Math.min(...members.map(m => m.gen)) - 1,
+        parentId: null,
+        birth: '',
+        death: '',
+        town: '',
+        notes: 'Root node connecting all family branches',
+        by: '',
+        isVirtual: true
+      });
+    }
   }
 
   let root;
@@ -247,11 +274,12 @@ function renderTree(preserveZoom=false){
     .attr('stroke',d=>gm(d.target.data.gen).color).attr('stroke-opacity',.3).attr('stroke-width',1.5);
 
   const ng=gSel.selectAll('.node-g').data(root.descendants()).enter()
-    .append('g').attr('class',d=>'node-g'+(d.data.id===selId?' selected':''))
+    .append('g').attr('class',d=>'node-g'+(d.data.id===selId?' selected':'')+(d.data.isVirtual?' virtual':''))
     .attr('transform',d=>`translate(${d.x},${d.y})`)
     .style('filter',d=>d.data.id===selId?'url(#glow)':null)
-    .on('click',(e,d)=>{e.stopPropagation();selectNode(d.data.id);})
-    .on('touchend',(e,d)=>{e.preventDefault();e.stopPropagation();selectNode(d.data.id);});
+    .style('opacity',d=>d.data.isVirtual?0.5:1)
+    .on('click',(e,d)=>{e.stopPropagation();if(!d.data.isVirtual)selectNode(d.data.id);})
+    .on('touchend',(e,d)=>{e.preventDefault();e.stopPropagation();if(!d.data.isVirtual)selectNode(d.data.id);});
 
   ng.each(function(d){
     const g=d3.select(this),m=d.data,gmv=gm(m.gen),s=m.id===selId;
@@ -264,11 +292,26 @@ function renderTree(preserveZoom=false){
     if(s)g.append('rect').attr('x',-NW/2-5).attr('y',-NH/2-5).attr('width',NW+10).attr('height',NH+10).attr('rx',14).attr('fill','none').attr('stroke',gmv.color).attr('stroke-width',2).attr('stroke-opacity',.7);
     g.append('rect').attr('class','n-bg').attr('x',-NW/2).attr('y',-NH/2).attr('width',NW).attr('height',NH).attr('rx',10).attr('fill',gmv.bg).attr('stroke',gmv.color).attr('stroke-width',s?2.5:1.2).attr('stroke-opacity',s?1:.7);
     g.append('rect').attr('x',-NW/2).attr('y',-NH/2).attr('width',4).attr('height',NH).attr('rx',2).attr('fill',gmv.color);
+    
+    // Add profile photo if available
+    if(m.photoUrl && !m.isVirtual){
+      const photoSize=40;
+      const photoX=-NW/2+10;
+      const photoY=-NH/2+8;
+      g.append('clipPath').attr('id',`clip-${m.id}`).append('circle').attr('cx',photoX+photoSize/2).attr('cy',photoY+photoSize/2).attr('r',photoSize/2);
+      g.append('image').attr('x',photoX).attr('y',photoY).attr('width',photoSize).attr('height',photoSize).attr('href',m.photoUrl).attr('clip-path',`url(#clip-${m.id})`).attr('preserveAspectRatio','xMidYMid slice');
+      g.append('circle').attr('cx',photoX+photoSize/2).attr('cy',photoY+photoSize/2).attr('r',photoSize/2).attr('fill','none').attr('stroke',gmv.color).attr('stroke-width',2);
+    }
+    
     const gg=m.gender==='Female'?'♀':m.gender==='Male'?'♂':'·';
-    g.append('text').attr('x',-NW/2+13).attr('y',-7).attr('fill',gmv.color).attr('font-size',genderSize).attr('font-family','DM Sans,sans-serif').attr('dominant-baseline','middle').text(gg);
-    g.append('text').attr('x',5).attr('y',-10).attr('text-anchor','middle').attr('dominant-baseline','middle').attr('font-family','Playfair Display,serif').attr('font-size',nameSize).attr('font-weight',700).attr('fill','#f5ead5').text(m.name.length>17?m.name.slice(0,16)+'…':m.name);
-    g.append('text').attr('x',5).attr('y',9).attr('text-anchor','middle').attr('dominant-baseline','middle').attr('font-family','DM Mono,monospace').attr('font-size',labelSize).attr('fill',gmv.color).attr('fill-opacity',.85).text(gmv.label);
-    if(m.birth)g.append('text').attr('x',5).attr('y',25).attr('text-anchor','middle').attr('dominant-baseline','middle').attr('font-family','DM Mono,monospace').attr('font-size',labelSize).attr('fill','#7a6e5f').text(`${m.birth} – ${m.death||t('present')}`);
+    const textStartX=m.photoUrl?-NW/2+58:-NW/2+13;
+    g.append('text').attr('x',textStartX).attr('y',-7).attr('fill',gmv.color).attr('font-size',genderSize).attr('font-family','DM Sans,sans-serif').attr('dominant-baseline','middle').text(gg);
+    
+    const nameX=m.photoUrl?10:5;
+    g.append('text').attr('x',nameX).attr('y',-10).attr('text-anchor','middle').attr('dominant-baseline','middle').attr('font-family','Playfair Display,serif').attr('font-size',nameSize).attr('font-weight',700).attr('fill','#f5ead5').text(m.name.length>17?m.name.slice(0,16)+'…':m.name);
+    g.append('text').attr('x',nameX).attr('y',9).attr('text-anchor','middle').attr('dominant-baseline','middle').attr('font-family','DM Mono,monospace').attr('font-size',labelSize).attr('fill',gmv.color).attr('fill-opacity',.85).text(gmv.label);
+    if(m.birth)g.append('text').attr('x',nameX).attr('y',25).attr('text-anchor','middle').attr('dominant-baseline','middle').attr('font-family','DM Mono,monospace').attr('font-size',labelSize).attr('fill','#7a6e5f').text(`${m.birth} – ${m.death||t('present')}`);
+    
     const kc=d.children?d.children.length:0;
     if(kc>0){
       g.append('circle').attr('cx',NW/2-12).attr('cy',-NH/2+12).attr('r',12).attr('fill',gmv.color).attr('stroke',gmv.bg).attr('stroke-width',2.5);

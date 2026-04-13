@@ -1,173 +1,333 @@
-# 🌳 My Family Tree - Enhanced Edition
+# 🌳 My Family Tree - Version 2.0
 
-A beautiful, interactive family tree application with photo uploads, statistics, and timeline features.
+> A beautiful, secure, and feature-rich family tree application with photo uploads, statistics, timeline, and collaborative editing.
 
-**Tech Stack:** Node.js · Express · MySQL · D3.js · Multermembers.
-Built with Node.js + Express + MySQL.
-
----
-
-## Files in this folder
-
-```
-family-tree/
-├── server.js          ← The backend (handles all data)
-├── package.json       ← Node.js dependencies
-├── .env.example       ← Copy to .env and fill in your DB details
-├── schema.sql         ← Run this once to set up the database
-├── public/
-│   └── index.html     ← The frontend (tree visualisation)
-└── README.md          ← This file
-```
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0+-blue.svg)](https://www.mysql.com/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ---
 
-## Option A — Host on Railway (easiest, free tier available)
+## ✨ Features
 
-Railway gives you Node.js hosting + MySQL in one place.
-
-### Step 1 — Create a Railway account
-Go to https://railway.app and sign up (free).
-
-### Step 2 — Create a new project
-- Click **New Project** → **Deploy from GitHub repo**
-- Push this folder to a GitHub repo first, then connect it
-  OR use **New Project** → **Empty project** and drag-drop the files
-
-### Step 3 — Add a MySQL database
-- Inside your Railway project, click **+ New** → **Database** → **MySQL**
-- Railway will create the database and show you the connection details
-
-### Step 4 — Run the schema
-- Click your MySQL service → **Connect** tab → open the MySQL shell
-- Paste the entire contents of `schema.sql` and run it
-- You should see: `✅ Seeded 29 members`
-
-### Step 5 — Set environment variables
-In your Railway project → your Node.js service → **Variables** tab, add:
-```
-DB_HOST     = (from Railway MySQL — looks like containers-us-west-xxx.railway.app)
-DB_PORT     = (from Railway MySQL — usually 3306 or a custom port)
-DB_USER     = root
-DB_PASSWORD = (from Railway MySQL)
-DB_NAME     = railway
-PORT        = 3000
-```
-
-### Step 6 — Deploy
-Railway auto-deploys when you push to GitHub. Your app will be live at a URL like:
-`https://my-family-tree.up.railway.app`
-
-Share that URL with your family — anyone can open it and add members.
+- 🌲 **Interactive Family Tree** - Beautiful D3.js visualization with zoom & pan
+- 📸 **Photo Uploads** - Attach photos to family members with captions
+- 📊 **Statistics Dashboard** - View family demographics and generation distribution
+- 📅 **Timeline View** - Chronological history of births and deaths
+- 🔒 **Admin Mode** - Secure authentication for sensitive operations
+- 🌐 **Internationalization** - Multi-language support (English, Twi)
+- 📱 **Mobile Responsive** - Works seamlessly on all devices
+- 🔄 **Real-time Sync** - Auto-refresh to see changes from other users
+- 💾 **Backup/Restore** - Export and import family data
+- 🔐 **Security Features** - Rate limiting, input sanitization, CORS protection
 
 ---
 
-## Option B — Host on Render (also free)
+## 🚀 Quick Start
 
-### Step 1
-Go to https://render.com → **New Web Service** → connect your GitHub repo
+### Prerequisites
 
-### Step 2
-Create a **New PostgreSQL** database
-*(Note: Render uses PostgreSQL, not MySQL. You'd need to adjust the SQL slightly —
-or use Render's MySQL-compatible PlanetScale add-on)*
+- **Node.js** 18.0 or higher
+- **MySQL** 8.0 or higher
+- **npm** or **yarn**
 
-For simplicity, **Railway is recommended** for MySQL.
+### Installation
 
----
+1. **Clone the repository**
+   ```bash
+   git clone <your-repo-url>
+   cd family-tree-v2
+   ```
 
-## Option C — Run on your own server (VPS/cPanel)
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-### Requirements
-- Node.js 18+
-- MySQL 8.0+
-
-### Setup
-```bash
-# 1. Upload all files to your server
-# 2. Install dependencies
-npm install
-
-# 3. **Configure environment variables**
+3. **Configure environment**
    ```bash
    cp .env.example .env
    ```
-   Edit `.env` and update your MySQL credentials and admin password:
-   ```
+   Edit `.env` and update with your values:
+   ```env
    DB_HOST=localhost
-   DB_PORT=3306
    DB_USER=root
-   DB_PASSWORD=your_mysql_password
+   DB_PASSWORD=your_secure_password
    DB_NAME=family_tree
-   PORT=3000
-   ADMIN_PASSWORD=YourSecurePasswordHere
+   ADMIN_PASSWORD=your_admin_password
    ```
-   ⚠️ **Important**: Change `ADMIN_PASSWORD` to a secure password for production!
 
-To keep it running permanently, use PM2:
-```bash
-npm install -g pm2
-pm2 start server.js --name family-tree
-pm2 save
-pm2 startup
+4. **Set up the database**
+   
+   **For new installations:**
+   ```bash
+   mysql -u root -p < schema.sql
+   ```
+   
+   **For existing v1.0 databases:**
+   ```bash
+   mysql -u root -p < database-migration.sql
+   ```
+
+5. **Start the server**
+   ```bash
+   npm start              # Production mode
+   # OR
+   npm run dev           # Development mode (auto-restart)
+   ```
+
+6. **Open in browser**
+   ```
+   http://localhost:3000
+   ```
+
+---
+
+## 📁 Project Structure
+
+```
+family-tree-v2/
+├── server.production.js      # Main production server (v2.0)
+├── server-enhanced.js         # Legacy enhanced server
+├── server.js                  # Legacy basic server
+├── package.json              # Dependencies and scripts
+├── .env.example              # Environment template
+├── schema.sql                # Complete database schema
+├── schema.legacy.sql         # Original v1.0 schema
+├── database-migration.sql    # Migration script (v1.0 → v2.0)
+├── public/                   # Frontend files
+│   ├── index.html           # Main HTML
+│   ├── app.js               # Application logic
+│   ├── styles.css           # Styling
+│   ├── i18n.js              # Translations
+│   └── d3.min.js            # D3.js library
+├── uploads/                  # Photo storage
+│   └── photos/
+├── backups/                  # Data backups
+└── docs/                     # Documentation
+
 ```
 
 ---
 
-## Run locally (for testing)
+## 🔧 Configuration
 
-```bash
-# Install Node.js from nodejs.org if you haven't already
+### Environment Variables
 
-# Install dependencies
-npm install
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `DB_HOST` | MySQL server hostname | Yes | `localhost` |
+| `DB_PORT` | MySQL server port | No | `3306` |
+| `DB_USER` | MySQL username | Yes | `root` |
+| `DB_PASSWORD` | MySQL password | Yes | - |
+| `DB_NAME` | Database name | Yes | `family_tree` |
+| `PORT` | Application port | No | `3000` |
+| `NODE_ENV` | Environment mode | No | `production` |
+| `ADMIN_PASSWORD` | Admin authentication password | Yes | - |
+| `ALLOWED_ORIGINS` | CORS allowed origins (comma-separated) | No | `http://localhost:3000` |
+| `SESSION_SECRET` | Session encryption secret | No | Auto-generated |
+| `MAX_FILE_SIZE_MB` | Maximum upload size in MB | No | `5` |
 
-# Copy and fill in your .env
-cp .env.example .env
+### Security Recommendations
 
-# Create database (requires MySQL installed locally)
-mysql -u root -p < schema.sql
+⚠️ **IMPORTANT**: Before deploying to production:
 
-# Start
-npm run dev    # uses nodemon — auto-restarts on file changes
-# OR
-npm start      # production mode
+1. Change `ADMIN_PASSWORD` to a strong password (12+ characters)
+2. Set `ALLOWED_ORIGINS` to your actual domain
+3. Generate a random `SESSION_SECRET`:
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   ```
+4. Never commit `.env` to version control
+5. Enable HTTPS in production
+
+---
+
+## 🌍 Deployment
+
+### Option 1: Railway (Recommended)
+
+1. Create account at [railway.app](https://railway.app)
+2. Create new project → Deploy from GitHub
+3. Add MySQL database service
+4. Set environment variables in Railway dashboard
+5. Deploy automatically on git push
+
+### Option 2: VPS/Cloud Server
+
+1. Install Node.js and MySQL on your server
+2. Clone repository and install dependencies
+3. Set up database using `schema.sql`
+4. Configure `.env` file
+5. Use PM2 for process management:
+   ```bash
+   npm install -g pm2
+   pm2 start server.production.js --name family-tree
+   pm2 save
+   pm2 startup
+   ```
+
+### Option 3: Docker (Coming Soon)
+
+Docker support will be added in a future release.
+
+---
+
+## 📖 API Documentation
+
+### Health Check
+```
+GET /health
+Response: { ok: true, timestamp: "...", database: "connected" }
 ```
 
-Open http://localhost:3000 in your browser.
+### Members
+```
+GET    /api/members           # Get all members
+POST   /api/members           # Add new member
+PUT    /api/members/:id       # Update member
+DELETE /api/members/:id       # Delete member
+```
+
+### Photos
+```
+POST   /api/photos/upload     # Upload photo (multipart/form-data)
+GET    /api/photos/:memberId  # Get member's photos
+```
+
+### Statistics
+```
+GET    /api/statistics        # Get family statistics
+GET    /api/timeline          # Get chronological timeline
+```
+
+### Authentication
+```
+POST   /api/auth/verify       # Verify admin password
+```
+
+### Change Requests
+```
+GET    /api/change-requests   # Get all change requests
+POST   /api/change-requests   # Submit change request
+PUT    /api/change-requests/:id  # Resolve request (admin only)
+```
 
 ---
 
-## How it works for the family
+## 🔒 Security Features
 
-- Anyone with the link can **view** the full tree
-- Anyone can **add a new member** (they must enter their own name in "Added By")
-- Anyone can **edit** or **delete** members
-- The app **auto-refreshes every 30 seconds** — so when one person adds someone,
-  everyone else sees it automatically within 30 seconds
-- The **Export** button downloads a backup JSON file at any time
-
----
-
-## API Reference (for developers)
-
-| Method | URL | Description |
-|--------|-----|-------------|
-| GET | /api/members | Get all members |
-| POST | /api/members | Add a new member |
-| PUT | /api/members/:id | Update a member |
-| DELETE | /api/members/:id | Delete a member |
-| GET | /health | Server health check |
+- **Rate Limiting**: Prevents brute force attacks
+- **Input Sanitization**: Protects against XSS and SQL injection
+- **CORS Protection**: Restricts cross-origin requests
+- **Helmet.js**: Sets secure HTTP headers
+- **File Upload Validation**: Restricts file types and sizes
+- **Password Authentication**: Admin-protected operations
+- **Transaction Safety**: Database operations use transactions
 
 ---
 
-## Environment Variables
+## 🐛 Troubleshooting
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| DB_HOST | MySQL server hostname | localhost |
-| DB_PORT | MySQL port | 3306 |
-| DB_USER | MySQL username | root |
-| DB_PASSWORD | MySQL password | secret123 |
-| DB_NAME | Database name | family_tree |
-| PORT | Port the server runs on | 3000 |
+### Database Connection Fails
+```bash
+# Check MySQL is running
+sudo systemctl status mysql
+
+# Test connection
+mysql -u root -p -e "SELECT 1"
+
+# Verify credentials in .env
+```
+
+### Migration Issues
+```bash
+# If migration fails, check schema version
+mysql -u root -p family_tree -e "DESCRIBE members"
+
+# Re-run migration
+mysql -u root -p family_tree < database-migration.sql
+```
+
+### Photo Uploads Not Working
+```bash
+# Ensure uploads directory exists and is writable
+mkdir -p uploads/photos
+chmod 755 uploads uploads/photos
+```
+
+### Port Already in Use
+```bash
+# Change PORT in .env or kill existing process
+lsof -ti:3000 | xargs kill -9
+```
+
+---
+
+## 🔄 Migration Guide (v1.0 → v2.0)
+
+If you're upgrading from version 1.0:
+
+1. **Backup your database**
+   ```bash
+   mysqldump -u root -p family_tree > backup.sql
+   ```
+
+2. **Run migration script**
+   ```bash
+   mysql -u root -p family_tree < database-migration.sql
+   ```
+
+3. **Install new dependencies**
+   ```bash
+   npm install
+   ```
+
+4. **Update package.json main file**
+   - Now uses `server.production.js`
+
+5. **Restart your server**
+   ```bash
+   pm2 restart family-tree
+   ```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## 📝 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- **D3.js** - Data visualization library
+- **Express.js** - Web framework
+- **MySQL** - Database
+- **Helmet.js** - Security middleware
+- **Multer** - File upload handling
+
+---
+
+## 📞 Support
+
+For issues and questions:
+- Open an issue on GitHub
+- Check existing documentation
+- Review troubleshooting section
+
+---
+
+**Built with ❤️ by the NdedePapa Family**

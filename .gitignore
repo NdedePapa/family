@@ -1,24 +1,47 @@
-node_modules/
+# ═══════════════════════════════════════════════════════════════
+# FAMILY TREE - GIT IGNORE CONFIGURATION
+# ═══════════════════════════════════════════════════════════════
+
+# ─── Environment & Secrets ─────────────────────────────────────
 .env
-*.log
+.env.local
+.env.*.local
+
+# ─── Dependencies ──────────────────────────────────────────────
+node_modules/
+
+# ─── System Files ──────────────────────────────────────────────
 .DS_Store
+Thumbs.db
+*.log
+*.pid
+*.seed
+*.pid.lock
 
-# Temporary SQL dumps and database exports
-*.sql
-!schema.sql
+# ─── Uploads & Media ───────────────────────────────────────────
+uploads/photos/*
+!uploads/photos/.gitkeep
 
-# Migration and data fix scripts
-add-*.js
-check-*.js
-export-*.js
-fix-*.js
-list-*.js
-final-*.js
-restore-*.js
-verify-*.js
+# ─── Database Backups ──────────────────────────────────────────
+backups/*.sql
+*.sqlite
+*.db
 
-# Temporary data files
-*-descendants.json
-*.md
-!README.md
-!CHANGELOG.md
+# ─── Temporary Files ───────────────────────────────────────────
+temp/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~
+
+# ─── IDE & Editor Files ────────────────────────────────────────
+.vscode/
+.idea/
+*.sublime-*
+.history/
+
+# ─── Build & Distribution ──────────────────────────────────────
+dist/
+build/
+.cache/
